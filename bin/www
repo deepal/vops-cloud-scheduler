@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 var debug = require('debug')('VirtualOps');
-var app = require('../app');
+var zabbix = require('../app');
 
-app.set('port', process.env.PORT || 3000);
-
-var server = app.listen(app.get('port'), function() {
-  debug('Express server listening on port ' + server.address().port);
+var res = zabbix.login("Admin", "zabbix", function(code, response){
+    console.log(response);
 });
+
