@@ -1,8 +1,20 @@
-#!/usr/bin/env node
-var debug = require('debug')('VirtualOps');
-var zabbix = require('../app');
+require('../config');
+var zabbixLogin = require("../zabbix/login")(1);
 
-var res = zabbix.login("Admin", "zabbix", function(code, response){
-    console.log(response);
+zabbixLogin.login(ZABBIX_USERNAME, ZABBIX_PASSWORD, function(status, data){
+    var zabbixSession = null;
+
+    if(status == 200){
+        zabbixSession = data.result;
+    }
+
+    var zapi = require("../zabbix/api")(zabbixSession);
+
+    var res = zapi.callMethod(ZABBIX_API_METHODS.hostslist, { output :"extend" }, function(status, data){
+        console.log(data);
+    });
+
 });
+
+
 

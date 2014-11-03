@@ -1,3 +1,3 @@
-var zabbix = require("./zabbix")();
 
-module.exports = zabbix;
+
+module.exports = zabbixLogin;

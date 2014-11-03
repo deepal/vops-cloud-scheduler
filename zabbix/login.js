@@ -1,10 +1,9 @@
-module.exports = function(){
+module.exports = function(requestID){
 
     require("../config");
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
-    var sessionID = null,
-        reqID = 1;
+    var reqID = requestID;
 
     var login = function(username, password, loginCallback){
         var requestParams = {};
@@ -25,7 +24,7 @@ module.exports = function(){
 
         var returnData = {};
         returnData.status = null;
-        returnData.data = null
+        returnData.data = null;
 
         client.post(ZABBIX_API, args, function(resData,rawRes){
 
@@ -40,25 +39,7 @@ module.exports = function(){
 
     }
 
-    var callMethod = function(){
-
-    }
-
-    var getSessionID = function(){
-        return sessionID;
-    }
-
-    var setSessionID = function(sessID){
-        sessionID = sessID;
-    }
-
-
-    var functions = {
-        login: login,
-        callMethod: callMethod,
-        getSessionID: getSessionID,
-        setSessionID: setSessionID
-    }
-
-    return functions;
+    return {
+        login: login
+    };
 }
