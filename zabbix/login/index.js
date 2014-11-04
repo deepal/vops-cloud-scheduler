@@ -1,9 +1,11 @@
 module.exports = function(requestID){
 
-    require("../config");
+    require("../../config/index");
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
     var reqID = requestID;
+
+    var sessionID = '';
 
     var login = function(username, password, loginCallback){
         var requestParams = {};
@@ -27,14 +29,7 @@ module.exports = function(requestID){
         returnData.data = null;
 
         client.post(ZABBIX_API, args, function(resData,rawRes){
-
-            if(rawRes.statusCode == 200){
-                loginCallback(rawRes.statusCode, resData )
-            }
-            else{
-                loginCallback(rawRes.statusCode, "Request Failed !" );
-            }
-
+            loginCallback(resData, rawRes );
         });
 
     }
