@@ -1,0 +1,61 @@
+extends layout
+
+block content
+    script(type='text/javascript', src='/js/requestactions.js')
+    div.container
+        div.panel.panel-default
+            div.panel-heading
+                b #{title}
+            div.panel-body
+                form(role="form", method="post", action="/submit")
+                    div.panel.panel-success
+                        div.panel-heading
+                            | Add a group
+
+                        div.panel-body
+                            div.row.form-group
+                                div.col-md-5
+                                    | Group name
+                                div.col-md-7
+                                    input(type='text', id='group-name').form-control
+                            div.row.form-group
+                                div.col-md-5
+                                    | Group id
+                                div.col-md-7
+                                    input(type='text', id='group-id').form-control
+                            div.row.form-group
+                                div.col-md-1.col-md-offset-11
+                                    button(id='add-group').btn.btn-success
+                                        | Add
+
+                    div.panel.panel-success
+                        div.panel.panel-heading
+                            | Add attributes
+                        div.panel.panel-body
+                            div.row
+                                div.col-md-2
+                                    label(for='select-group') Select group
+                                    select(id='select-group').form-control
+                                        option(value='none')= '-'
+                                div.col-md-2
+                                    - console.log(attrs)
+                                    label(for='select-attr') Select attribute
+                                    select(id='select-attr').form-control
+                                        each atr in attrs
+                                            option(value=atr.attr)=atr.name
+
+                                div.col-md-6
+                                    label(for='attr-values') Edit attribute
+                                    div#attr-values
+                                div.col-md-2
+                                    label(for='attr-actions') Actions
+                                    div.row#attr-actions
+                                        div.col-md-4
+                                            button(id='add-attr').btn.btn-success.btn-sm Add
+                                        div.col-md-4
+                                            button(id='remove-attr').btn.btn-danger.btn-sm Remove
+
+                    button(type="submit").btn.btn-default
+                        | Submit request
+
+

@@ -17,3 +17,55 @@ ZABBIX_API_METHODS = {
     hostslist: "host.get",
     itemslist: "item.get"
 };
+
+//Resource allocation attributes
+ATTRS = [
+    {
+        attr:"vm_count",
+        name: "VM Count",
+        fields:[
+            "Value"
+        ]
+    },
+
+    {
+        attr:"os",
+        name: "OS",
+        fields:["name","version"]
+    },
+    {
+        attr:"cpu",
+        name: "CPU",
+        fields:["Architecture","Frequency","Cores","Unit"]
+    },
+    {
+        attr:"min_memory",
+        name: "Min Memory",
+        fields:["Value","Unit"]
+    },
+    {
+        attr:"storage",
+        name: "Storage",
+        fields:["Value","Unit"]
+    },
+    {
+        attr:"network",
+        name: "Network",
+        fields:["Min. Bandwidth","Unit"]
+    },
+    {
+        attr:"priority",
+        name: "Priority",
+        fields:["Value"]
+    },
+    {
+        attr:"hpc",
+        name: "HPC info",
+        fields:["Required"]
+    },
+    {
+        attr:"allocation_time",
+        name: "Allocation Time",
+        fields:["From","to"]
+    }
+]
