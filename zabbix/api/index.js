@@ -29,6 +29,10 @@ module.exports = function(sessionID){
 
     }
 
+    var getCloudStats = function(fnCallback){
+        exec("history.get")
+    }
+
     return {
         exec: exec
     };

@@ -2,8 +2,6 @@ require('./config');
 var bodyParser = require('body-parser');
 var xmlParser = require('express-xml-bodyparser');
 var zabbixLogin = new(require("./zabbix/login"))(1);
-var sessID = '';
-var test = "123";
 
 var pubDir = './core/frontend/public';
 var viewDir = './core/frontend/views';
@@ -22,22 +20,8 @@ var resSuccess = function(res, msg){
     });
 }
 
-
-zabbixLogin.login(ZABBIX_USERNAME, ZABBIX_PASSWORD, function(data, res){
+var zabbixLoginCallback = function(data, res) {
     sessID = data.result;
-
-    var cloudstack = new (require('./cloudstack/lib/cloudstack'))({
-        apiUri: 'http://localhost:8080/client/api?',
-        apiKey: 'yl47bTZM6BxSj80AV9kjPKqccpwe_BhYiHZ1n28rdOe6l3SbjU6A1AWkKAF9rr-G2f4Fw9vP2tTmE4NSqTwshg',
-        apiSecret: 'WoXBbFBiXszG-Fc25hkbj1Rx46CZq3TabrSVKYtsYSKzS3c6NhZPZG-sf_U_RxHlMsFYDjZwhO6JPtEpTvH_AQ'
-    });
-
-    var zapi = new(require('./zabbix/api'))(sessID);
-
-//    zapi.exec(ZABBIX_API_METHODS.hostslist, null, function(data, res){
-//        console.log(data);
-//        console.log(res.statusCode);
-//    });
 
     var express = require('express');
     var app = express();
@@ -52,29 +36,32 @@ zabbixLogin.login(ZABBIX_USERNAME, ZABBIX_PASSWORD, function(data, res){
         extended: true
     }));
 
-    app.get('/', function(req, res){
+    app.get('/', function (req, res) {
         console.log("Express server got a request");
         resSuccess(res, "Resource scheduler is up and running")
     });
 
-    app.get('/web', function(req, res){
+    app.get('/web', function (req, res) {
         var requestAttrs = ATTRS;
-        res.render('request', {title : 'Submit a resource request', attrs : requestAttrs});
+        res.render('request', {title: 'Submit a resource request', attrs: requestAttrs});
     });
 
-    app.post('/submit', function(req, res){
+    app.post('/submit', function (req, res) {
         console.log("request received");
         res.send("Your request received!");
     });
 
-    app.post('/request/:type', function(req, res){
+    app.post('/request', function (req, res) {
+        var scheduler = require('./core/scheduler')(req.body);
         res.send(req.body);
     });
 
     console.log("Resource scheduler is waiting for requests...");
     app.listen(3000);
 
-});
+}
+
+zabbixLogin.login(ZABBIX_USERNAME, ZABBIX_PASSWORD, zabbixLoginCallback);
 
 
 

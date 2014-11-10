@@ -1,6 +1,6 @@
 module.exports = function(requestID){
 
-    require("../../config/index");
+    require("../../config");
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
     var reqID = requestID;
