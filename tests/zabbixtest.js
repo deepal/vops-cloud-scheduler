@@ -4,8 +4,6 @@ require('../config')
 var zb = require('../zabbix');
 var zabbix = zb();
 
-var res = zabbix.login("Admin", "zabbix");
-
 
 //describe('Zabbix Module Test suite', function(){
 //

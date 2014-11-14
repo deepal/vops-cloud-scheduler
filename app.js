@@ -2,27 +2,15 @@ require('./config');
 var bodyParser = require('body-parser');
 var xmlParser = require('express-xml-bodyparser');
 var zabbixLogin = new(require("./zabbix/login"))(1);
+var routes = require('./core/frontend/routes/routefunctions');  //this module includes all the functions which gets executed in http request
 
 var pubDir = './core/frontend/public';
 var viewDir = './core/frontend/views';
 
-var resError = function(res, msg){
-    res.send({
-        result: "error",
-        message: msg
-    });
-}
-
-var resSuccess = function(res, msg){
-    res.send({
-        result: "success",
-        message: msg
-    });
-}
-
 var zabbixLoginCallback = function(data, res) {
     sessID = data.result;
 
+    var db = require('./core/db');
     var express = require('express');
     var app = express();
 
@@ -36,25 +24,13 @@ var zabbixLoginCallback = function(data, res) {
         extended: true
     }));
 
-    app.get('/', function (req, res) {
-        console.log("Express server got a request");
-        resSuccess(res, "Resource scheduler is up and running")
-    });
+    app.get('/', routes.home);
 
-    app.get('/web', function (req, res) {
-        var requestAttrs = ATTRS;
-        res.render('request', {title: 'Submit a resource request', attrs: requestAttrs});
-    });
+    app.get('/web', routes.webUI);
 
-    app.post('/submit', function (req, res) {
-        console.log("request received");
-        res.send("Your request received!");
-    });
+    app.post('/submit', routes.submitWebRequest);
 
-    app.post('/request', function (req, res) {
-        var scheduler = require('./core/scheduler')(req.body);
-        res.send(req.body);
-    });
+    app.post('/request', routes.submitAPIRequest);
 
     console.log("Resource scheduler is waiting for requests...");
     app.listen(3000);
