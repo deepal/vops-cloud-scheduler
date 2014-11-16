@@ -1,17 +1,19 @@
-//API information
-ZABBIX_API = "http://localhost/zabbix/api_jsonrpc.php";
-CLOUDSTACK_API="http://localhost:8080/client/api?";
+//Cloudstack configuration
 
-//authentication information
-CLOUDSTACK_API_SECRET_KEY = "";
-CLOUDSTACK_API_KEY = "";
-ZABBIX_USERNAME = "Admin"
-ZABBIX_PASSWORD = "zabbix";
+CLOUDSTACK = {}
+CLOUDSTACK.API = "http://localhost:8080/client/api?"
+CLOUDSTACK.API_KEY = "tNuyVh4Kt1U2_6dJ9uyTvDy1G-MNZNRVq_OhIoFYARvzxI18hZnwrXceOf_Hz5CXSixvuIi4kfmSyS0EUf_IHA"
+CLOUDSTACK.SECRET_KEY = "GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA"
+CLOUDSTACK.METHODS = {};
 
-//API method reference
-CLOUDSTACK_API_METHODS = {};
 
-ZABBIX_API_METHODS = {
+//Zabbix configuration
+
+ZABBIX = {}
+ZABBIX.API = "http://localhost/zabbix/api_jsonrpc.php"
+ZABBIX.USERNAME = "Admin"
+ZABBIX.PASSWORD = "zabbix";
+ZABBIX.METHODS = {
     login: "user.login",
     history: "history.get",
     hostslist: "host.get",

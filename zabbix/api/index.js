@@ -18,19 +18,15 @@ module.exports = function(sessionID){
             data: requestParams,
             headers:{"Content-Type": "application/json-rpc"}    // ask response type to be application/json-rpc
         };
-
+        
         var returnData = {};
         returnData.status = null;
         returnData.data = null
 
-        client.post(ZABBIX_API, args, function(resData,rawRes){
+        client.post(ZABBIX.API, args, function(resData,rawRes){
             callBack(resData, rawRes);
         });
 
-    }
-
-    var getCloudStats = function(fnCallback){
-        exec("history.get")
     }
 
     return {

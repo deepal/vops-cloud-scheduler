@@ -12,7 +12,7 @@ module.exports = function(requestID){
         var apiParams = {};
 
         requestParams.jsonrpc = "2.0";
-        requestParams.method = ZABBIX_API_METHODS.login;
+        requestParams.method = ZABBIX.METHODS.login;
         apiParams.user = username;
         apiParams.password = password;
         requestParams.params = apiParams;
@@ -28,8 +28,8 @@ module.exports = function(requestID){
         returnData.status = null;
         returnData.data = null;
 
-        client.post(ZABBIX_API, args, function(resData,rawRes){
-            loginCallback(resData, rawRes );
+        client.post(ZABBIX.API, args, function(resData,rawRes){
+            loginCallback(resData, rawRes);
         });
 
     }

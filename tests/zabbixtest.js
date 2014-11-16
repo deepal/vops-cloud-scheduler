@@ -1,29 +1,36 @@
-var should = require('should'),
-    assert = require('assert');
+var should = require('should');
 require('../config')
-var zb = require('../zabbix');
-var zabbix = zb();
+var zb = require('../zabbix/login');
+;
+var zlogin = new zb(2);
 
 
-//describe('Zabbix Module Test suite', function(){
-//
-//    it("zabbix login function should return true", function(done){
-//        var res = zabbix.login("Admin", "zabbix");
-//        console.log("Data from login method: "+res)
-//        assert.equal(true, res.status);
-//        done();
-//    });
-//
-//    it("zabbix login function should set the sessionID properly", function(done){
-//        assert.notEqual(null, zabbix.getSessionID());
-//        done();
-//    });
-//
-//    it("zabbix callMethod function should not give error for valid zabbix call", function(done){
-//        var results = zabbix.callMethod(ZABBIX_API_METHODS.hostslist, { "output": "extend" });
-//        assert.equal(undefined, results.error);
-//        console.log(results);
-//        done();
-//    });
-//
-//});
+describe('Zabbix Module Test suite', function(){
+
+    it("zabbix login function should return results", function(done){
+        zlogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, function(data, res){
+            should.exist(res);
+            res.statusCode.should.equal(200);
+            should.exist(data);
+            should.not.exist(data.error);
+            done();
+        })
+    });
+
+    it("zabbix api method call test failed", function(done){
+        zlogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, function(data, res){
+            var sessID = data.result;
+            var zapi = require('../zabbix/api')
+            var client = new zapi(sessID);
+
+            client.exec(ZABBIX.METHODS.history, {limit: 2}, function(resData, rawRes){
+                should.exist(rawRes);
+                rawRes.statusCode.should.equal(200);
+                should.exist(resData);
+                should.not.exist(resData.error);
+                done();
+            });
+        })
+    });
+
+});

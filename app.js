@@ -37,7 +37,7 @@ var zabbixLoginCallback = function(data, res) {
 
 }
 
-zabbixLogin.login(ZABBIX_USERNAME, ZABBIX_PASSWORD, zabbixLoginCallback);
+zabbixLogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, zabbixLoginCallback);
 
 
 
