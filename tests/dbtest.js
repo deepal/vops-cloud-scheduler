@@ -1,5 +1,5 @@
 
-describe('MongoDB test suite', function(){
+describe.skip('MongoDB test suite', function(){
 
     var db = require('../core/db');
     var userSchema = require('../core/db/schemas/user');

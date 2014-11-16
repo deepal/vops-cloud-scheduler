@@ -6,7 +6,7 @@ var cloudstack = new (require('csclient'))({
     secretKey: 'GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA'
 });
 
-describe('Cloudstack module test suite', function(){
+describe.skip('Cloudstack module test suite', function(){
 
     beforeEach(function(done){
         //nothing yet

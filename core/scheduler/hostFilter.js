@@ -4,31 +4,39 @@ module.exports = function(resourceRequest){
     var hosts = [];
     require('../../config');
 
-    var getHostItems = function(zapi, hostIndex, hosts, callback){
-        console.log("Host index"+ hostIndex);
-        if(hostIndex >= hosts.length){
-            callback(null, hosts);
-        }
-        else{
-            zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid}, function(data, rawRes){
-                if(!data.error){
-                    for(var j in data.result){
-                        hosts[hostIndex].items.push(data.result[j].itemid);
-                    }
-                    hostIndex++;
-                    getHostItems(zapi, hostIndex, hosts, callback);
-                }
-                else{
-                    callback(data.error);
-                }
-            });
-        }
-
+    var attrContainsInKeys = function(val){
+        var keys = ['vm.memory.size[available]','vfs.fs.size[/,free]','vfs.fs.size[/,pfree]', 'system.cpu.load', '	vfs.fs.size[/,total]', '']
+        return keys.indexOf(val) > -1;
     }
 
-    var fetchHostStats = function(zSession, callback){
-        var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
+    var fetchHostItemInfo = function(zSession, callback){
 
+        var getHostItems = function(zapi, hostIndex, hosts, callback){
+            console.log("Host index"+ hostIndex);
+            if(hostIndex >= hosts.length){
+                callback(null, hosts);
+            }
+            else{
+                zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function(data, rawRes){
+                    if(!data.error){
+                        for(var j in data.result){
+                            hosts[hostIndex].items.push({
+                                id: data.result[j].itemid,
+                                key: data.result[j].key_
+                            });
+                        }
+                        hostIndex++;
+                        getHostItems(zapi, hostIndex, hosts, callback);
+                    }
+                    else{
+                        callback(data.error);
+                    }
+                });
+            }
+
+        }
+
+        var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
         //call host.get method via zabbix api
         zapi.exec(ZABBIX.METHODS.hostslist, {}, function(data, rawRes){
             if(!data.error){
@@ -54,7 +62,14 @@ module.exports = function(resourceRequest){
         });
     }
 
+    var fetchHostStats = function(zSession, callback){
+        fetchHostItemInfo(zSession, function(err, hostInfo){
+
+        })
+    }
+
     return {
+        fetchHostItemInfo: fetchHostItemInfo,
         fetchHostStats: fetchHostStats
     }
 
