@@ -2,6 +2,7 @@ module.exports = function(resourceRequest){
 
     var hostStats = {};
     var hosts = [];
+    var historyItems = [];
     require('../../config');
 
     var attrContainsInKeys = function(val){
@@ -68,9 +69,56 @@ module.exports = function(resourceRequest){
         })
     }
 
+    var getItemHistory = function (zSession , callback){
+
+        var zapi = new (require('../../zabbix/api'))(zSession);
+
+       // var zSession = require('../../zabbix/api');
+        //var zapi = new zSession();
+
+        var params = {
+            output: "extend",
+            history: 0,
+            itemids: "23259",
+            sortfield: "clock",
+            sortorder: "DESC",
+            limit: 10
+        }
+
+        zapi.exec(ZABBIX.METHODS.history, params, function(data,res){
+
+
+
+            if(!data.error){
+                console.log(data);
+                for(var i in data.result){
+                    var historyItem = data.result[i];
+
+                    historyItems.push({
+                        item: historyItem.itemid,
+                        timestamp: historyItem.clock,
+                        value: historyItem.value,
+                        ns: historyItem.ns
+                    });
+
+
+               console.log(historyItems[i].item);
+               console.log(historyItems[i].timestamp);
+               console.log(historyItems[i].value);
+
+                }
+            }
+
+            else{
+            callback(data.error);
+        }
+        });
+    }
+
     return {
         fetchHostItemInfo: fetchHostItemInfo,
-        fetchHostStats: fetchHostStats
+        fetchHostStats: fetchHostStats,
+        getItemHistory: getItemHistory
     }
 
 }
