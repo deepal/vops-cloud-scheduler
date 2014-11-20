@@ -1,3 +1,10 @@
+<<<<<<< HEAD
 .idea/*
 VirtualOps.iml
 *.log
+=======
+tests/debug/*
+*.iml
+*.log
+.idea/*
+>>>>>>> 0817fae34c10f9278ee35952a2c1989d91d9ef06
