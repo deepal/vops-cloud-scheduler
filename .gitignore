@@ -1,0 +1,4 @@
+tests/debug/*
+*.iml
+*.log
+.idea/*

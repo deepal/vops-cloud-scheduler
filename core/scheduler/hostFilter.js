@@ -2,7 +2,7 @@ module.exports = function(resourceRequest){
 
     var hostStats = {};
     var hosts = [];
-   // var historyItems = [];
+    var averages = [];
     require('../../config');
 
     var attrContainsInKeys = function(val){
@@ -20,19 +20,13 @@ module.exports = function(resourceRequest){
             else{
                 zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function(data, rawRes){
                     if(!data.error){
-                        //new code
-                        var itemno =0;
                         for(var j in data.result){
                             hosts[hostIndex].items.push({
                                 id: data.result[j].itemid,
                                 key: data.result[j].key_,
                                 historyItems: []
                             });
-                           //new  code
-
-                           itemno++;
                         }
-
                         hostIndex++;
                         getHostItems(zapi, hostIndex, hosts, callback);
                     }
@@ -106,7 +100,7 @@ module.exports = function(resourceRequest){
                 itemids: hostInfo[hostIndex].items[itemIndex].id,
                 sortfield: "clock",
                 sortorder: "DESC",
-                limit: 1
+                limit: 2
             }
 
             zapi.exec(ZABBIX.METHODS.history, params, function(data, res){
@@ -134,8 +128,54 @@ module.exports = function(resourceRequest){
         }
     }
 
+    var calculateMovingAverage = function (zSession, callback){
+        fetchHostStats(zSession, function (error, hostInfo){
+
+            if(!error) {
+                var hostIndex = 0;
+
+                    while(hostIndex < hostInfo.length) {
+                        var itemIndex =0;
+                        while (itemIndex < hostInfo[hostIndex].items.length) {
+                            var historyIndex = 0;
+                            var values =[];
+                            while (historyIndex < hostInfo[hostIndex].items[itemIndex].historyItems.length) {
+                                    values.push( parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[historyIndex].value));
+                                    console.log(values);
+                                    historyIndex++;
+                            }
+
+                            for(var i=1; i<values.length;i++){
+                                if(values[i-1] != null) {
+                                    var average = (values[i] + values[i - 1]);
+                                }
+                                else{
+                                    var average = values[i];
+                                }
+
+                            }
+                            averages.push({
+                               item :  hostInfo[hostIndex].items[itemIndex].id,
+                               average: average
+                            });
+
+                            itemIndex++;
+
+                        }
+                        hostIndex++;
+                    }
+
+                callback(null, averages);
+                }
+
+            else{
+                callback(error);
+            }
+        });
+    }
+
     return {
-        fetchHostItemInfo: fetchHostItemInfo
+        calculateMovingAverage: calculateMovingAverage
     }
 
 }
