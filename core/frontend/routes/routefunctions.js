@@ -29,7 +29,7 @@ var submitWebRequest = function (req, res) {
 
 var submitAPIRequest = function (req, res, zSession) {
     var scheduler = require('../../scheduler/vmScheduler')(zSession);
-    scheduler.requestForAllocation(req.body, function(status, responseMessage){ //TODO: 
+    scheduler.requestForAllocation(req.body, function(status, responseMessage){
         res.send(status, responseMessage);
     });
 }
