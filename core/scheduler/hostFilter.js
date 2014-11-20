@@ -6,7 +6,7 @@ module.exports = function(resourceRequest){
     require('../../config');
 
     var attrContainsInKeys = function(val){
-        var keys = ['vm.memory.size[available]','vfs.fs.size[/,free]','vfs.fs.size[/,pfree]', 'system.cpu.load', '	vfs.fs.size[/,total]', '']
+        var keys = ZABBIX.SELECTED_ITEM_ATTR;
         return keys.indexOf(val) > -1;
     }
 
@@ -21,11 +21,13 @@ module.exports = function(resourceRequest){
                 zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function(data, rawRes){
                     if(!data.error){
                         for(var j in data.result){
-                            hosts[hostIndex].items.push({
-                                id: data.result[j].itemid,
-                                key: data.result[j].key_,
-                                historyItems: []
-                            });
+                            if(attrContainsInKeys(data.result[j].key_) == true) {
+                                hosts[hostIndex].items.push({
+                                    id: data.result[j].itemid,
+                                    key: data.result[j].key_,
+                                    historyItems: []
+                                });
+                            }
                         }
                         hostIndex++;
                         getHostItems(zapi, hostIndex, hosts, callback);
@@ -185,8 +187,16 @@ module.exports = function(resourceRequest){
         });
     }
 
+    var fetchCloudInfo = function (zSession, callback){
+        calculateMovingAverage(zSession, function(err, hostInfo){
+            ///filter hosts and pass candidate hosts and there resource utilization info to callback function
+            resourceRequest
+            callback(null, hostInfo);
+        });
+    }
+
     return {
-        calculateMovingAverage: calculateMovingAverage
+        fetchCloudInfo: fetchCloudInfo
     }
 
 }
