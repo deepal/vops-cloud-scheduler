@@ -6,11 +6,21 @@ module.exports = function(zSession){
         hostFilter.fetchCloudInfo(zSession, function(err, filteredHostInfo){
 
             if(filteredHostInfo.length == 0){
-                var priorityScheduler = new (require('./priorityScheduler'))(jsonAllocRequest);
+                var priorityScheduler = new (require('./priorityScheduler'))();
                 /// do whatever you do with priority scheduler
+                priorityScheduler.scheduleRequest(jsonAllocRequest, function(result, selectedHost){
+                    // results returned from migration scheduler or preemptive scheduler
+                    if(result.status == 'success'){
+                        //allocate resources for the request in the 'selectedHost'. Then call 'callback' function.
+                        //in the callback function, specify the job id for the allocation
+                    }
+                    else{
+                        callback("Error", "Not enough resources to serve your resource request");
+                    }
+                });
             }
             else{
-                // schedule allocation directly
+                // select the host with minimum resources and create VMs there using cloudstack module.
             }
 
         });

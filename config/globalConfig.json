@@ -1,0 +1,29 @@
+{
+  "hostFilter": {
+
+  },
+  "allocationQueueManager": {
+
+  },
+  "preemptiveScheduler": {
+
+  },
+  "migrationScheduler": {
+
+  },
+  "priorityScheduler": {
+
+  },
+  "vmScheduler": {
+
+  },
+  "authService": {
+
+  },
+  "frontendWeb": {
+
+  },
+  "frontendAPI": {
+
+  }
+}
