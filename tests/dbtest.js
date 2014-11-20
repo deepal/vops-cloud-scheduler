@@ -2,7 +2,7 @@
 describe.skip('MongoDB test suite', function(){
 
     var db = require('../core/db');
-    var userSchema = require('../core/db/schemas/user');
+    var userSchema = require('../core/db/schemas/dbUsers');
     var should = require('should')
 
 

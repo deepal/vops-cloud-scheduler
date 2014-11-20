@@ -20,6 +20,46 @@ ZABBIX.METHODS = {
     itemslist: "item.get"
 };
 
+//PriorityLevels
+PRIORITY = {};
+
+PRIORITY = {
+    JOB: {
+        HIGH: 3,
+        MEDIUM: 2,
+        LOW: 1,
+        BEST_EFFORT: 0
+    },
+    USER: {
+        HIGH: {
+            value: 3,
+            maxJobPriority: [
+                PRIORITY.JOB.HIGH,
+                PRIORITY.JOB.MEDIUM,
+                PRIORITY.JOB.LOW,
+                PRIORITY.JOB.BEST_EFFORT
+            ]
+        },
+        MEDIUM: {
+            value: 2,
+            maxJobPriority: [
+                PRIORITY.JOB.MEDIUM,
+                PRIORITY.JOB.LOW,
+                PRIORITY.JOB.BEST_EFFORT
+            ]
+        },
+        LOW: {
+            value: 1,
+            maxJobPriority: [
+                PRIORITY.JOB.LOW,
+                PRIORITY.JOB.BEST_EFFORT
+            ]
+        }
+    }
+};
+
+
+
 //Resource allocation attributes
 ATTRS = [
     {
