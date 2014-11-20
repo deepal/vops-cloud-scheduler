@@ -30,7 +30,9 @@ var zabbixLoginCallback = function(data, res) {
 
     app.post('/submit', routes.submitWebRequest);
 
-    app.post('/request', routes.submitAPIRequest);
+    app.post('/request', function(req, res){
+        routes.submitAPIRequest(req, res, sessID);
+    });
 
     console.log("Resource scheduler is waiting for requests...");
     app.listen(3000);

@@ -19,17 +19,19 @@ ZABBIX.METHODS = {
     hostslist: "host.get",
     itemslist: "item.get"
 };
+ZABBIX.SELECTED_ITEM_ATTR = ['vm.memory.size[available]', 'vm.memory.size[total]', 'system.cpu.load', 'system.cpu.util', 'system.cpu.num'];
 
 //PriorityLevels
 PRIORITY = {};
+PRIORITY = {};
+PRIORITY.JOB = {
+    HIGH: 3,
+    MEDIUM: 2,
+    LOW: 1,
+    BEST_EFFORT: 0
+}
 
 PRIORITY = {
-    JOB: {
-        HIGH: 3,
-        MEDIUM: 2,
-        LOW: 1,
-        BEST_EFFORT: 0
-    },
     USER: {
         HIGH: {
             value: 3,

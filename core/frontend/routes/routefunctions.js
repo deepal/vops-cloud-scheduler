@@ -27,9 +27,11 @@ var submitWebRequest = function (req, res) {
     res.send("Your request received!");
 }
 
-var submitAPIRequest = function (req, res) {
-    var scheduler = require('./core/scheduler')(req.body);
-    res.send(req.body);
+var submitAPIRequest = function (req, res, zSession) {
+    var scheduler = require('../../scheduler/vmScheduler')(zSession);
+    scheduler.requestForAllocation(req.body, function(status, responseMessage){ //TODO: 
+        res.send(status, responseMessage);
+    });
 }
 
 module.exports = {

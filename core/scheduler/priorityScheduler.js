@@ -1,3 +1,7 @@
-/**
- * Created by deepal on 11/14/14.
- */
+module.exports = function(jsonAllocRequest){
+
+    return {
+
+    }
+
+}
