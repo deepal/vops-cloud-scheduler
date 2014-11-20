@@ -1,6 +1,6 @@
 module.exports = function(resourceRequest){
 
-    var hostStats = {};
+    var hostStats = [];
     var hosts = [];
     var averages = [];
     require('../../config');
@@ -134,14 +134,19 @@ module.exports = function(resourceRequest){
             if(!error) {
                 var hostIndex = 0;
 
-                    while(hostIndex < hostInfo.length) {
-                        var itemIndex =0;
+                while(hostIndex < hostInfo.length) {
+
+                    hostStats.push({
+                        hostid: hostInfo[hostIndex].hostid,
+                        itemStats: []
+                    });
+
+                    var itemIndex =0;
                         while (itemIndex < hostInfo[hostIndex].items.length) {
                             var historyIndex = 0;
                             var values =[];
                             while (historyIndex < hostInfo[hostIndex].items[itemIndex].historyItems.length) {
                                     values.push( parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[historyIndex].value));
-                                    console.log(values);
                                     historyIndex++;
                             }
 
@@ -154,18 +159,24 @@ module.exports = function(resourceRequest){
                                 }
 
                             }
-                            averages.push({
-                               item :  hostInfo[hostIndex].items[itemIndex].id,
+
+
+                            hostStats[hostIndex].itemStats.push({
+                               itemid :  hostInfo[hostIndex].items[itemIndex].id,
+                               itemkey: hostInfo[hostIndex].items[itemIndex].key,
                                average: average
                             });
+
+
 
                             itemIndex++;
 
                         }
                         hostIndex++;
+
                     }
 
-                callback(null, averages);
+                callback(null, hostStats);
                 }
 
             else{
