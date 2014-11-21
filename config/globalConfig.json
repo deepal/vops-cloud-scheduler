@@ -1,29 +1,13 @@
 {
   "hostFilter": {
-
+    "alpha": 0.5
   },
-  "allocationQueueManager": {
-
-  },
-  "preemptiveScheduler": {
-
-  },
-  "migrationScheduler": {
-
-  },
-  "priorityScheduler": {
-
-  },
-  "vmScheduler": {
-
-  },
-  "authService": {
-
-  },
-  "frontendWeb": {
-
-  },
-  "frontendAPI": {
-
-  }
+  "allocationQueueManager": {},
+  "preemptiveScheduler": {},
+  "migrationScheduler": {},
+  "priorityScheduler": {},
+  "vmScheduler": {},
+  "authService": {},
+  "frontendWeb": {},
+  "frontendAPI": {}
 }

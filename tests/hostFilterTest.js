@@ -8,7 +8,7 @@ describe("Host filter test suite", function(){
         var zlogin = new (require('../zabbix/login'))(1);
         zlogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, function(data, rawRes){
             sessID = data.result;
-            hostFilter.calculateMovingAverage(sessID, function(err, hostStats){
+            hostFilter.fetchCloudInfo(sessID, function(err, hostStats){
                 should.not.exist(err);
                 should.exist(hostStats);
                 console.log(JSON.stringify(hostStats));
