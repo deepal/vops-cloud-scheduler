@@ -22,6 +22,10 @@ module.exports = function(){
 
                 result.scheduler = "migration_scheduler";
 
+                /*
+                'selectedHost' should be an object according to the schema at /core/db/schemas/dbHosts
+                 */
+
                 callback(result, selectedHost);
 
             }
