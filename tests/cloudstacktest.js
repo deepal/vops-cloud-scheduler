@@ -1,12 +1,12 @@
 var should = new require('should');
 
 var cloudstack = new (require('csclient'))({
-    serverURL: 'http://localhost:8080/client/api?',
-    apiKey: 'tNuyVh4Kt1U2_6dJ9uyTvDy1G-MNZNRVq_OhIoFYARvzxI18hZnwrXceOf_Hz5CXSixvuIi4kfmSyS0EUf_IHA',
-    secretKey: 'GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA'
+    serverURL: 'http://10.8.100.145:8080/client/api?',
+    apiKey: 'X3bh4KCyuwTi-dwceXr8XN64sV7Q7qLpOWIrAIRY9YZqCuPmpQvESMyX4pzr73wn68nk06RGzYGJhezKqFu8cg',
+    secretKey: '4LbvY2_dAyLXxyolHC3aAxttu4r1jaz8AIa4kkuJ8Z9T5IZRXBbU4UKXDnqNfbPVHUQGbol6UXHTDOc9vpMH6Q'
 });
 
-describe.skip('Cloudstack module test suite', function(){
+describe('Cloudstack module test suite', function(){
 
     beforeEach(function(done){
         //nothing yet

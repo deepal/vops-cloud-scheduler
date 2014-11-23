@@ -3,7 +3,7 @@ module.exports = function(){
         var db = require('../db');
         var UserSession = require('../db/schemas/dbSession');
 
-        UserSession.find({ sessionID: sessionID }).exec(function (err, sessionObj) {
+        UserSession.findOne({ sessionID: sessionID }).exec(function (err, sessionObj) {
             if(err){
                 callback({
                     status: 'Error',
@@ -28,8 +28,7 @@ module.exports = function(){
                 }
             }
         });
-        return true;
     }
 
-    return validateAdmin;
+    return {validateAdmin: validateAdmin};
 }

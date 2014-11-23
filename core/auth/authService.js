@@ -8,17 +8,14 @@ module.exports = function(){
     var User = require('../db/schemas/dbUser');
     var UserSession = require('../db/schemas/dbSession');
     var md5 = require('MD5');
+    var response = require('../../config/responseMessages');
 
     var login = function (username, password, callback) {
 
         //check whether given username and password match any of the users in the dbUser collection
         User.findOne({ username: username }).exec(function (err, userObj) {
             if(err){
-                callback({
-                    status: 'Error',
-                    code: 500,
-                    error: err
-                });
+                callback(response.error(500, "Internal Server Error occurred !", err));
             }
             else{
                 if(userObj){
@@ -52,17 +49,11 @@ module.exports = function(){
                         });
                     }
                     else{
-                        callback({
-                            status: 'Error',
-                            message: 'Username or Password invalid!'
-                        });
+                        callback(response.error(200, "Username or Password Invalid!"));
                     }
                 }
                 else{
-                    callback({
-                        status: 'Error',
-                        message: 'No such user exists!'
-                    });
+                    callback(response.error(200, "No such user exists!"));
                 }
             }
         });
@@ -85,18 +76,11 @@ module.exports = function(){
     var createUser = function (userObj, callback) {
         User.findOne({ username: userObj.username}).exec(function (err, user) {
             if(err){
-                callback({
-                    status: 'Error',
-                    code: 500,
-                    error: err
-                });
+                callback(response.error(500, "Internal Server Error!", err));
             }
             else{
                 if(user){
-                    callback({
-                        status: 'Error',
-                        message: 'Username is used in an existing account. Try a different username !'
-                    });
+                    callback(response.error(200, "User account already exists!"));
                 }
                 else{
                     var objID = (require('mongoose')).Types.ObjectId();
@@ -117,11 +101,7 @@ module.exports = function(){
                             });
                         }
                         else{
-                            callback(null, {
-                                status: 'Success',
-                                userID: objID,
-                                message: 'User account was created successfully !'
-                            });
+                            callback(null, response.success(200, 'User account was created successfully', objID));
                         }
                     });
                 }
