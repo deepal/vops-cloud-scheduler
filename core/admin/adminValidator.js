@@ -1,8 +1,33 @@
 module.exports = function(){
-    var validateAdmin = function(sessionID){
-        //TODO:check whether this session ID belongs to an admin user session. If return true, else return false
-        //until this is implemented, let's always return true
+    var validateAdmin = function(sessionID, callback){
+        var db = require('../db');
+        var UserSession = require('../db/schemas/dbSession');
 
+        UserSession.find({ sessionID: sessionID }).exec(function (err, sessionObj) {
+            if(err){
+                callback({
+                    status: 'Error',
+                    code: 500,
+                    error: err
+                });
+            }
+            else{
+                if(sessionObj){
+                    if(sessionObj.admin){
+                        callback(null, {
+                            admin: true,
+                            sessionID: sessionID
+                        });
+                    }
+                }
+                else{
+                    callback({
+                        status: 'Error',
+                        error: 'Unauthorized request !'
+                    });
+                }
+            }
+        });
         return true;
     }
 

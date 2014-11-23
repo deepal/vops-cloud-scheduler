@@ -57,4 +57,21 @@ describe('Authentication Service Test suite', function () {
         });
     });
 
+    it('authorizeResourceRequest function should return a prioritized request through callback', function (done) {
+        var authService = require('../core/auth/authService')();
+
+        authService.login('vishmi', 'vnd', function (err, sessID) {
+            authService.authorizeResourceRequest({
+                requestInfo: {},
+                sessionID: sessID
+            }, function (err, prioritizedRequest) {
+                should.not.exist(err);
+                should.exist(prioritizedRequest);
+                prioritizedRequest.userPriority.should.equal(PRIORITY.USER.MEDIUM.value);
+                done();
+            });
+        });
+    });
+
+
 });

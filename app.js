@@ -30,6 +30,8 @@ var zabbixLoginCallback = function(data, res) {
 
     app.post('/submit', routes.submitWebRequest);
 
+    app.post('/admin/createUser', routes.adminCreateUser);
+
     app.post('/request', function(req, res){
         routes.submitAPIRequest(req, res, sessID);
     });

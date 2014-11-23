@@ -10,42 +10,46 @@ module.exports = function(){
     var md5 = require('MD5');
 
     var login = function (username, password, callback) {
-        var hPassword = md5(password);  //create a MD5 hash of the password #TODO include password salting
 
         //check whether given username and password match any of the users in the dbUser collection
         User.findOne({ username: username }).exec(function (err, userObj) {
             if(err){
-                callback(err);
+                callback({
+                    status: 'Error',
+                    code: 500,
+                    error: err
+                });
             }
             else{
                 if(userObj){
                     var hPassword = md5(password + userObj._id.getTimestamp());
                     if(userObj.password == hPassword){
-                        if(err){
-                            callback(err);
-                        }
-                        else{
-                            userObj.loginTime = Date.now();         //include login time in the user object to create a unique session key
-                            var sessionKey = md5(JSON.stringify(userObj));  //create unique session key from stringified user object
+                        //userObj.loginTime = Date.now();         //include login time in the user object to create a unique session key
+                        var sessionKey = md5(JSON.stringify(userObj)+Date.now());  //create unique session key from stringified user object
 
-                            var Session = require('../db/schemas/dbSession');
-                            var newSession = new Session({
-                                _id: userObj._id,
-                                username: userObj.username,
-                                sessionID: sessionKey,
-                                admin: userObj.admin
-                            });
+                        var Session = require('../db/schemas/dbSession');
+                        var newSession = new Session({
+                            //_id: userObj._id,      // This key is removed since a user may have multiple sessions
+                            username: userObj.username,
+                            sessionID: sessionKey,
+                            userPriority: userObj.priority,
+                            admin: userObj.admin
+                        });
 
-                            //save newly created session in the database
-                            newSession.save(function (err) {
-                                if(err){
-                                    callback("Could not create user session!");
-                                }
-                                else{
-                                    callback(null, sessionKey);
-                                }
-                            });
-                        }
+                        //save newly created session in the database
+                        newSession.save(function (err) {
+                            if(err){
+                                throw err;
+                                //callback({
+                                //    status: 'Error',
+                                //    code: 500,
+                                //    error: err
+                                //});
+                            }
+                            else{
+                                callback(null, sessionKey);
+                            }
+                        });
                     }
                     else{
                         callback({
@@ -81,7 +85,11 @@ module.exports = function(){
     var createUser = function (userObj, callback) {
         User.findOne({ username: userObj.username}).exec(function (err, user) {
             if(err){
-                callback(err);
+                callback({
+                    status: 'Error',
+                    code: 500,
+                    error: err
+                });
             }
             else{
                 if(user){
@@ -102,7 +110,11 @@ module.exports = function(){
                     });
                     newUser.save(function (err) {
                         if(err){
-                            throw err;
+                            callback({
+                                status: 'Error',
+                                code: 500,
+                                error: err
+                            });
                         }
                         else{
                             callback(null, {
@@ -120,9 +132,22 @@ module.exports = function(){
     var authorizeResourceRequest = function (userRequest, callback) {
         // query dbSessions schema and authorize the request. Return the prioritized request
         var sessionKey = userRequest.sessionID;
+
+        if(!sessionKey){
+            callback({
+                status: 'Error',
+                code: 403,
+                message: 'Unauthorized request'
+            });
+        }
+
         UserSession.findOne({ sessionID: sessionKey }).exec(function (err, sessionObj) {
             if(err){
-                callback(err);
+                callback({
+                    status: 'Error',
+                    code: 500,
+                    error: err
+                });
             }
             else{
                 if(sessionObj){
@@ -142,15 +167,47 @@ module.exports = function(){
         });
     }
 
-    var adminRequestAuthorize = function (sessionKey, adminRequest, callback) {
-
-    }
+    //var adminRequestAuthorize = function (adminRequest, callback) {
+    //    if(!adminRequest.sessionID){
+    //        UserSession.find({ sessionID: adminRequest.sessionID }).exec(function (err, sessionObj) {
+    //            if(err){
+    //                callback({
+    //                    status: 'Error',
+    //                    code: 500,
+    //                    error: err
+    //                });
+    //            }
+    //            else{
+    //                if(sessionObj){
+    //                    if(sessionObj.admin){
+    //                        callback(null, {
+    //                            admin: true,
+    //                            requestContent: adminRequest
+    //                        });
+    //                    }
+    //                    else{
+    //                        callback({
+    //                            admin: false,
+    //                            requestContent: adminRequest
+    //                        });
+    //                    }
+    //                }
+    //                else{
+    //                    callback({
+    //                        status: 'Error',
+    //                        code: 403,
+    //                        error: 'Unauthorized request!'
+    //                    });
+    //                }
+    //            }
+    //        });
+    //    }
+    //}
 
     return {
         login: login,
         createUser: createUser,
-        authorizeResourceRequest: authorizeResourceRequest,
-        adminRequestAuthorize: adminRequestAuthorize
+        authorizeResourceRequest: authorizeResourceRequest
     }
 
 }

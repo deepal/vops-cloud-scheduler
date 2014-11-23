@@ -34,11 +34,19 @@ var submitAPIRequest = function (req, res, zSession) {
     });
 }
 
+var adminCreateUser = function(req, res){
+    var authService = require('../../auth/authService')();
+    authService.createUser(req.body, function (err, response) {
+        res.send(response);
+    });
+}
+
 module.exports = {
     resError: resError,
     resSuccess: resSuccess,
     home: home,
     webUI: webUI,
     submitWebRequest: submitWebRequest,
-    submitAPIRequest: submitAPIRequest
+    submitAPIRequest: submitAPIRequest,
+    adminCreateUser: adminCreateUser
 }
