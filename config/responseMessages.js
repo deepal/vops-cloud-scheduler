@@ -1,6 +1,6 @@
 var successMessage = function(code, friendlyMessageString, returnObject){
     return {
-        status: 'Success',
+        status: 'success',
         code: code,
         message: friendlyMessageString,
         returnObject: returnObject
@@ -9,7 +9,7 @@ var successMessage = function(code, friendlyMessageString, returnObject){
 
 var errorMessage = function (code, friendlyMessageString, errorObject) {
     return {
-        status: 'Success',
+        status: 'error',
         code: code,
         message: friendlyMessageString,
         returnObject: errorObject
