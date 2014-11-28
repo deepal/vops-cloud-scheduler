@@ -41,6 +41,14 @@ var adminCreateUser = function(req, res){
     });
 }
 
+var configWrite = function(req, res){
+    res.send("")
+}
+
+var configRead = function (req, res) {
+    res.send("");
+}
+
 module.exports = {
     resError: resError,
     resSuccess: resSuccess,
@@ -48,5 +56,7 @@ module.exports = {
     webUI: webUI,
     submitWebRequest: submitWebRequest,
     submitAPIRequest: submitAPIRequest,
-    adminCreateUser: adminCreateUser
+    adminCreateUser: adminCreateUser,
+    configWrite: configWrite,
+    configRead: configRead
 }

@@ -1,17 +1,21 @@
 //Cloudstack configuration
 
-CLOUDSTACK = {}
-CLOUDSTACK.API = "http://localhost:8080/client/api?"
-CLOUDSTACK.API_KEY = "tNuyVh4Kt1U2_6dJ9uyTvDy1G-MNZNRVq_OhIoFYARvzxI18hZnwrXceOf_Hz5CXSixvuIi4kfmSyS0EUf_IHA"
-CLOUDSTACK.SECRET_KEY = "GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA"
+CLOUDSTACK = {};
+CLOUDSTACK.API = "http://localhost:8080/client/api?";
+CLOUDSTACK.API_KEY = "tNuyVh4Kt1U2_6dJ9uyTvDy1G-MNZNRVq_OhIoFYARvzxI18hZnwrXceOf_Hz5CXSixvuIi4kfmSyS0EUf_IHA";
+CLOUDSTACK.SECRET_KEY = "GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA";
 CLOUDSTACK.METHODS = {};
 
+//MongoDB configuration
+
+MONGO = {};
+MONGO.HOST = "10.8.106.208";
 
 //Zabbix configuration
 
-ZABBIX = {}
-ZABBIX.API = "http://localhost/zabbix/api_jsonrpc.php"
-ZABBIX.USERNAME = "Admin"
+ZABBIX = {};
+ZABBIX.API = "http://localhost/zabbix/api_jsonrpc.php";
+ZABBIX.USERNAME = "Admin";
 ZABBIX.PASSWORD = "zabbix";
 ZABBIX.METHODS = {
     login: "user.login",

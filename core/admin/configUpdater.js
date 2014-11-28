@@ -1,5 +1,5 @@
 module.exports = function(){
-    var validateAdmin = require('./adminValidator');
+    var validator = require('./adminValidator')();
     var jf = require('jsonfile');
     var confFile = process.env.PWD + '/config/globalConfig.json';
     var readConfig = function (callback) {
@@ -19,16 +19,19 @@ module.exports = function(){
     }
 
     var writeConfig = function (adminSessID, configObj, callback){
-        if(validateAdmin(adminSessID)){
-            jf.writeFile(confFile, configObj, function (err) {
-                if(err){
-                    callback(err);
-                }
-                else{
-                    callback(null, "Configuration saved successfully!");
-                }
-            })
-        }
+        validator.validateAdmin(adminSessID, function(err, res){
+            console.log(res);
+            if(res.admin){
+                jf.writeFile(confFile, configObj, function (err) {
+                    if(err){
+                        callback(err);
+                    }
+                    else{
+                        callback(null, "Configuration saved successfully!");
+                    }
+                });
+            }
+        });
     }
 
     return {
