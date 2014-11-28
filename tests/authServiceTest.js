@@ -52,7 +52,7 @@ describe('Authentication Service Test suite', function () {
         }, function (err, result) {
             should.not.exist(err);
             should.exist(result);
-            result.status.should.equal('Success');
+            result.status.should.equal('success');
             done();
         });
     });
@@ -67,7 +67,7 @@ describe('Authentication Service Test suite', function () {
             }, function (err, prioritizedRequest) {
                 should.not.exist(err);
                 should.exist(prioritizedRequest);
-                prioritizedRequest.userPriority.should.equal(PRIORITY.USER.MEDIUM.value);
+                prioritizedRequest.session.userPriority.should.equal(PRIORITY.USER.MEDIUM.value);
                 done();
             });
         });
