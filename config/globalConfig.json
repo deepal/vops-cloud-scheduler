@@ -1,6 +1,7 @@
 {
   "hostFilter": {
-    "alpha": 0.5
+    "alpha": 0.1,
+    "ewma_last": 0
   },
   "allocationQueueManager": {},
   "preemptiveScheduler": {},

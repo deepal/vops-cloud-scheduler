@@ -5,6 +5,13 @@ module.exports = function(resourceRequest){
     var averages = [];
     require('../../config');
 
+    var configUpdater = new (require("../admin/configUpdater"))();
+    var responseInfo = require('../../config/responseMessages');
+
+    var db = require('../../core/db');
+    var EwmaSchema = require('../db/schemas/dbItemEWMA');
+
+
     var attrContainsInKeys = function(val){
         var keys = ZABBIX.SELECTED_ITEM_ATTR;
         return keys.indexOf(val) > -1;
@@ -70,7 +77,7 @@ module.exports = function(resourceRequest){
         fetchHostItemInfo(zSession, function(err, hostInfo){
             var zapi = new (require('../../zabbix/api'))(zSession);
             getItemHistory(zapi, hostInfo, 0, callback);
-        })
+        });
     }
 
     var getItemHistory = function(zapi, hostInfo, hostIndex, callback){
@@ -130,68 +137,114 @@ module.exports = function(resourceRequest){
         }
     }
 
-    var calculateMovingAverage = function (zSession, callback){
-        fetchHostStats(zSession, function (error, hostInfo){
-
-            if(!error) {
-                var hostIndex = 0;
-
-                while(hostIndex < hostInfo.length) {
-
-                    hostStats.push({
-                        hostid: hostInfo[hostIndex].hostid,
-                        itemStats: []
-                    });
-
-                    var itemIndex =0;
-                        while (itemIndex < hostInfo[hostIndex].items.length) {
-                            var historyIndex = 0;
-                            var values =[];
-                            while (historyIndex < hostInfo[hostIndex].items[itemIndex].historyItems.length) {
-                                    values.push( parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[historyIndex].value));
-                                    historyIndex++;
-                            }
-
-                            for(var i=1; i<values.length;i++){
-                                if(values[i-1] != null) {
-                                    var average = (values[i] + values[i - 1]);
-                                }
-                                else{
-                                    var average = values[i];
-                                }
-
-                            }
-
-
-                            hostStats[hostIndex].itemStats.push({
-                               itemid :  hostInfo[hostIndex].items[itemIndex].id,
-                               itemkey: hostInfo[hostIndex].items[itemIndex].key,
-                               average: average
-                            });
-
-
-
-                            itemIndex++;
-
-                        }
-                        hostIndex++;
-
-                    }
-
-                callback(null, hostStats);
-                }
-
-            else{
+    var calculateMovingAverage = function (zSession, callback) {
+        fetchHostStats(zSession, function (error, hostInfo) {
+            if (!error) {
+                getInfoItem(0, hostInfo, function(error, hostInfo, hostStats){
+                    insertItemInfo(0, hostStats, callback);
+                });
+            }
+            else {
                 callback(error);
             }
         });
     }
 
+    var getInfoItem = function (hostIndex, hostInfo, callback) {
+        if (hostIndex >= hostInfo.length) {
+            callback(null, hostInfo, hostStats);
+        }
+
+        else {
+            getInfoPerItem(hostIndex, 0, hostInfo, function (err, hostInfo) {
+                if (!err) {
+                    hostIndex++;
+                    getInfoItem(hostIndex, hostInfo, callback);
+                }
+
+                else {
+                    callback(err);
+                }
+            });
+        }
+    }
+
+    var getInfoPerItem = function (hostIndex, itemIndex, hostInfo, callback) {
+        if (itemIndex >= hostInfo[hostIndex].items.length) {
+            callback(null, hostInfo, hostStats);
+        }
+        else {
+            EwmaSchema.findOne({zabbixItemID: hostInfo[hostIndex].items[itemIndex].id}).exec(function (err, item) {
+                if (err) {
+                    responseInfo.error(500, "Internal Server Error !", err);
+                }
+                else {
+                    configUpdater.readConfig(function (err, config) {
+                        if (!err) {
+                            if (item) {
+                                var average = 0;
+                                for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                    average = average + parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                }
+
+                                ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
+                                hostStats.push({
+                                    hostId: hostInfo[hostIndex].hostid,
+                                    itemId: hostInfo[hostIndex].items[itemIndex].id,
+                                    ewma_latest: ewma_new
+                                });
+                            }
+                            else {
+                                var average = 0;
+                                for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                    average = average + parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                }
+                                hostStats.push({
+                                    hostId: hostInfo[hostIndex].hostid,
+                                    itemId: hostInfo[hostIndex].items[itemIndex].id,
+                                    ewma_latest: average
+                                });
+                            }
+                            itemIndex++;
+                            getInfoPerItem(hostIndex, itemIndex, hostInfo, callback);
+                        }
+                        else {
+                            throw err;
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    var insertItemInfo = function(statItemIndex, hostStats, callback) {
+        if (statItemIndex >= hostStats.length) {
+            callback(null, hostStats);
+        }
+        else{
+            var ewmaInfo = new EwmaSchema({
+                zabbixItemID: hostStats[statItemIndex].itemId,
+                ewma_last: hostStats[statItemIndex].ewma_latest
+            });
+
+            ewmaInfo.save(function (err) {
+                if (!err) {
+                    statItemIndex++;
+                    insertItemInfo(statItemIndex, hostStats, callback);
+                }
+                else{
+                    callback(err);
+                }
+            });
+        }
+    }
+
+
     var fetchCloudInfo = function (zSession, callback){
-        calculateMovingAverage(zSession, function(err, hostInfo){
+        calculateMovingAverage(zSession, function(err, hostInfo, hostStats){
             ///filter hosts and pass candidate hosts and there resource utilization info to callback function
-            resourceRequest
-            callback(null, hostInfo);
+           // resourceRequest
+            callback(null, hostInfo, hostStats);
         });
     }
 

@@ -1,7 +1,8 @@
 module.exports = function(){
     var validateAdmin = require('./adminValidator');
     var jf = require('jsonfile');
-    var confFile = process.env.PWD + '/config/globalConfig.json';
+    var confFile = '/home/vishmi/projects/VirtualOps/config/globalConfig.json';
+    console.log(confFile);
     var readConfig = function (callback) {
         jf.readFile(confFile, function (err, obj) {
             if(err){
