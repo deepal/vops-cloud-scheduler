@@ -29,7 +29,7 @@ var submitWebRequest = function (req, res) {
 
 var submitAPIRequest = function (req, res, zSession) {
     var scheduler = require('../../scheduler/vmScheduler')(zSession);
-    scheduler.requestForAllocation(req.body, function(status, responseMessage){
+    scheduler.requestForAllocation(req.body.resource_request, function(status, responseMessage){
         res.send(status, responseMessage);
     });
 }
@@ -38,6 +38,19 @@ var adminCreateUser = function(req, res){
     var authService = require('../../auth/authService')();
     authService.createUser(req.body, function (err, response) {
         res.send(response);
+    });
+}
+
+var login = function (req, res) {
+    var authService = require('../../auth/authService')();
+    var response = require('../../../config/responseMessages');
+    authService.login(req.body.username, req.body.password, function (err, sessionID) {
+        if(err){
+            res.send(err);
+        }
+        else{
+            res.send(response.success(200, 'Login successful', { sessionID: sessionID}));
+        }
     });
 }
 
@@ -57,6 +70,7 @@ module.exports = {
     submitWebRequest: submitWebRequest,
     submitAPIRequest: submitAPIRequest,
     adminCreateUser: adminCreateUser,
+    login: login,
     configWrite: configWrite,
     configRead: configRead
 }

@@ -8,7 +8,7 @@ var pubDir = './core/frontend/public';
 var viewDir = './core/frontend/views';
 
 var zabbixLoginCallback = function(data, res) {
-    sessID = data.result;
+    var sessID = data.result;
 
     var db = require('./core/db');
     var express = require('express');
@@ -31,6 +31,8 @@ var zabbixLoginCallback = function(data, res) {
     app.post('/submit', routes.submitWebRequest);
 
     app.post('/admin/createUser', routes.adminCreateUser);
+
+    app.post('/login', routes.login);
 
     app.post('/request', function(req, res){
         routes.submitAPIRequest(req, res, sessID);

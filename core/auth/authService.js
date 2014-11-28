@@ -106,7 +106,7 @@ module.exports = function(){
 
     var authorizeResourceRequest = function (userRequest, callback) {
         // query dbSessions schema and authorize the request. Return the prioritized request
-        var sessionKey = userRequest.sessionID;
+        var sessionKey = userRequest.session_id[0];
 
         if(!sessionKey){
             callback({
@@ -141,43 +141,6 @@ module.exports = function(){
             }
         });
     }
-
-    //var adminRequestAuthorize = function (adminRequest, callback) {
-    //    if(!adminRequest.sessionID){
-    //        UserSession.find({ sessionID: adminRequest.sessionID }).exec(function (err, sessionObj) {
-    //            if(err){
-    //                callback({
-    //                    status: 'Error',
-    //                    code: 500,
-    //                    error: err
-    //                });
-    //            }
-    //            else{
-    //                if(sessionObj){
-    //                    if(sessionObj.admin){
-    //                        callback(null, {
-    //                            admin: true,
-    //                            requestContent: adminRequest
-    //                        });
-    //                    }
-    //                    else{
-    //                        callback({
-    //                            admin: false,
-    //                            requestContent: adminRequest
-    //                        });
-    //                    }
-    //                }
-    //                else{
-    //                    callback({
-    //                        status: 'Error',
-    //                        code: 403,
-    //                        error: 'Unauthorized request!'
-    //                    });
-    //                }
-    //            }
-    //        });
-    //    }
-    //}
 
     return {
         login: login,

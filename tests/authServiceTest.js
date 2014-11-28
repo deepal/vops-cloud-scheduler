@@ -63,7 +63,7 @@ describe('Authentication Service Test suite', function () {
         authService.login('vishmi', 'vnd', function (err, sessID) {
             authService.authorizeResourceRequest({
                 requestInfo: {},
-                sessionID: sessID
+                session_id: [sessID]
             }, function (err, prioritizedRequest) {
                 should.not.exist(err);
                 should.exist(prioritizedRequest);
