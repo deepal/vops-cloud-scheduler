@@ -36,12 +36,7 @@ module.exports = function(){
                         //save newly created session in the database
                         newSession.save(function (err) {
                             if(err){
-                                throw err;
-                                //callback({
-                                //    status: 'Error',
-                                //    code: 500,
-                                //    error: err
-                                //});
+                                callback(err)
                             }
                             else{
                                 callback(null, sessionKey);
@@ -132,7 +127,7 @@ module.exports = function(){
             else{
                 if(sessionObj){
                     callback(null, {
-                        userPriority: sessionObj.userPriority,
+                        session: sessionObj,
                         requestContent: userRequest
                     });
                 }
