@@ -7,57 +7,69 @@ module.exports = function(){
      */
 
     var scheduleRequest = function(jsonAllocRequest, callback){
-        /*
-        1. Call the 'MigrationScheduler' and check whether it is possible to migrate some VMs from a particular host( obviously
+
+        var Allocations = require('../db/schemas/dbAllocation');
+        var responseMessage = require('../../config/responseMessages');
+        /*1. Call the 'MigrationScheduler' and check whether it is possible to migrate some VMs from a particular host( obviously
         has enough total CPU, Memory, Number of cores to handle incoming request) and gain space on that host such that
-        the resource request can be allocated there.
-        */
+        the resource request can be allocated there.*/
 
         var migrationScheduler = new (require('./migrationScheduler'))();
 
-        migrationScheduler.findHostByMigration(jsonAllocRequest, function(result, selectedHost){
+        migrationScheduler.findHostByMigration(jsonAllocRequest, function(error, selectedHost){
 
-            if(result.status == 'success'){
-                // if result.status is 'success', value returned for 'selectedHost' is the HOST information of the host selected by migration scheduler
-
-                result.scheduler = "migration_scheduler";
-
-                /*
-                'selectedHost' should be an object according to the schema at /core/db/schemas/dbHosts
-                 */
-
-                callback(result, selectedHost);
-
+            if(!error){
+                callback(null, selectedHost);
             }
             else{
-                 //If result.status is 'error', no host could be selected for this request to be allocated by migrating its VMs to other hosts. Time to go for preemptive scheduling..
-                //TODO: Retrieve current allocations from the database and check whether current request has higher priority than any of the current allocations
-                //TODO: Also check whether if lower priority VMs were unallocated, significant resource space can be gained to schedule the new request. Otherwise there's no point of preempting VMs unnecessarily
-
-                var preemptiveScheduler = new (require('./preemptiveScheduler'))();
-
-                preemptiveScheduler.findHostByPreemption(jsonAllocRequest, function (result, selectedHost) {
-                    if(result.status == 'success'){
-                        /*
-                         if result.status is 'success', value returned for 'selectedHost' is the HOST information
-                         of the host selected by preemption scheduler
-                         */
-                        result.scheduler = "preemptive_scheduler";
-                        callback(result, selectedHost);
+                Allocations.find({
+                    allocationPriority: {
+                        $lt: jsonAllocRequest.requestContent.priority
+                    }
+                }).exec(function (err, allocations) {
+                    if(err){
+                        callback(responseMessage.error(500, 'Internal Server Error', err));
                     }
                     else{
-                        //If no host was found either using migration scheduler or preemptive scheduler, just return result message to the vm scheduler.
-                        callback(result);
+                        if(allocations){
+                            if(allocations.length){
+                                //there are allocation with less priority than the coming, they can be preempted if useful
+                                var candidates = null; //should be equal to the array of most suitable hosts which can be freed by suspending VMs
+
+                                var preemptiveScheduler = new (require('./preemptiveScheduler'))();
+
+                                preemptiveScheduler.findHostByPreemption(jsonAllocRequest, candidates, function (result, selectedHost) {
+                                    if(result.status == 'success'){
+                                        /*
+                                         if result.status is 'success', value returned for 'selectedHost' is the HOST information
+                                         of the host selected by preemption scheduler
+                                         */
+                                        result.scheduler = "preemptive_scheduler";
+                                        callback(null, selectedHost);
+                                    }
+                                    else{
+                                        //If no host was found either using migration scheduler or preemptive scheduler, just return result message to the vm scheduler.
+                                        callback(responseMessage.error('200','No enough resource to serve your request at this moment !'));
+                                    }
+                                });
+                            }
+                            else{
+                                callback(responseMessage.error('200','No enough resource to serve your request at this moment !'));
+                            }
+                        }
+                        else{
+                            callback(responseMessage.error(200, 'Database returned none'));
+                        }
                     }
                 });
+
+
+
+
             }
 
         });
 
-        /*
-        2. If migration is not possible (if such host is not found), invoke 'Preemptive Scheduler' and pass the 'jsonAllocRequest'
-        to preemptive scheduler
-         */
     }
 
     return {

@@ -27,6 +27,7 @@ describe('Admin validator test suite', function () {
                     should.exist(result);
                     should.exist(result.admin);
                     result.admin.should.equal(true);
+                    console.log(result);
                     done();
                 });
             }

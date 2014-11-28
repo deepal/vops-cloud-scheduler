@@ -3,17 +3,21 @@ var configUpdater = require('../core/admin/configUpdater')();
 
 describe('Config updater test', function () {
 
+    var authService = require('../core/auth/authService')();
+
     afterEach(function(done){
         configUpdater.readConfig(function(err, config){
             config.hostFilter.alpha = 0.5;
-            configUpdater.writeConfig(null, config, function(err, msg){ //for this moment let's pass adminSessID as null
-                if(err){
-                    throw err;
-                }
-                else{
-                    done();
-                }
+            authService.login('admin', 'password', function (err, sessID) {
+                configUpdater.writeConfig(sessID, config, function(err, msg){ //for this moment let's pass adminSessID as null
+                    if(err){
+                        throw err;
+                    }
+                    else{
+                        done();
+                    }
 
+                });
             });
         })
     });
@@ -31,17 +35,19 @@ describe('Config updater test', function () {
 
         configUpdater.readConfig(function(err, config){
             config.hostFilter.alpha = 0.9;
-            configUpdater.writeConfig(null, config, function(err, msg){ //for this moment let's pass adminSessID as null
-                should.not.exist(err);
-                should.exist(msg);
-                console.log(msg);
-                configUpdater.readConfig(function(err, config){ //for this moment let's pass adminSessID as null
+            authService.login('admin','password', function (err, sessID) {
+                configUpdater.writeConfig(sessID, config, function(err, msg){ //for this moment let's pass adminSessID as null
                     should.not.exist(err);
                     should.exist(msg);
-                    config.hostFilter.alpha.should.equal(0.9);
-                    done();
-                });
+                    console.log(msg);
+                    configUpdater.readConfig(function(err, config){ //for this moment let's pass adminSessID as null
+                        should.not.exist(err);
+                        should.exist(msg);
+                        config.hostFilter.alpha.should.equal(0.9);
+                        done();
+                    });
 
+                });
             });
         });
 
