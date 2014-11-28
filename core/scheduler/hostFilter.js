@@ -218,21 +218,21 @@ module.exports = function(resourceRequest){
     }
 
     var insertItemInfo = function(statItemIndex, hostStats, callback) {
+
         if (statItemIndex >= hostStats.length) {
             callback(null, hostStats);
         }
-        else{
-            var ewmaInfo = new EwmaSchema({
-                zabbixItemID: hostStats[statItemIndex].itemId,
-                ewma_last: hostStats[statItemIndex].ewma_latest
-            });
+        else {
+            var conditions = {zabbixItemID: hostStats[statItemIndex].itemId};
+            var update = { $set: {ewma_last: hostStats[statItemIndex].ewma_latest}};
+            var options = { upsert : true};
 
-            ewmaInfo.save(function (err) {
+            EwmaSchema.update(conditions, update, options, function (err) {
                 if (!err) {
                     statItemIndex++;
                     insertItemInfo(statItemIndex, hostStats, callback);
                 }
-                else{
+                else {
                     callback(err);
                 }
             });
