@@ -1,10 +1,9 @@
 var mongoose = require('mongoose');
 
 module.exports = mongoose.model('DBAllocation', {
-    allocationID : Number,
     from: Date,
-    to: Date,
-    allocationID: Number,
+    expires: Date,
+    userSession: Object,
     allocationTimestamp: Date,
     allocationPriority: Number,
     associatedHosts: Array,
