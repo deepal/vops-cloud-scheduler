@@ -2,6 +2,7 @@ module.exports = function (resourceRequest) {
 
     var hostStats = [];
     var hosts = [];
+    var candidateHosts = [];
     var averages = [];
     require('../../config');
 
@@ -21,7 +22,6 @@ module.exports = function (resourceRequest) {
     var fetchHostItemInfo = function (zSession, callback) {
 
         var getHostItems = function (zapi, hostIndex, hosts, callback) {
-            console.log("Host index" + hostIndex);
             if (hostIndex >= hosts.length) {
                 callback(null, hosts);
             }
@@ -29,10 +29,12 @@ module.exports = function (resourceRequest) {
                 zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function (data, rawRes) {
                     if (!data.error) {
                         for (var j in data.result) {
+
                             if (attrContainsInKeys(data.result[j].key_) == true) {
                                 hosts[hostIndex].items.push({
                                     id: data.result[j].itemid,
                                     key: data.result[j].key_,
+                                    valueType: parseInt(data.result[j].value_type),
                                     historyItems: []
                                 });
                             }
@@ -106,7 +108,7 @@ module.exports = function (resourceRequest) {
 
             var params = {
                 output: "extend",
-                history: 0,
+                history: hostInfo[hostIndex].items[itemIndex].valueType,
                 itemids: hostInfo[hostIndex].items[itemIndex].id,
                 sortfield: "clock",
                 sortorder: "DESC",
@@ -141,8 +143,8 @@ module.exports = function (resourceRequest) {
     var calculateMovingAverage = function (zSession, callback) {
         fetchHostStats(zSession, function (error, hostInfo) {
             if (!error) {
-                getInfoItem(0, hostInfo, function (error, hostInfo, hostStats) {
-                    insertItemInfo(0, hostStats, callback);
+                getStatInfoItem(0, hostInfo, function (error, hostInfo, hostStats) {
+                    updateDBInfo(0, hostStats, callback);
                 });
             }
             else {
@@ -151,16 +153,20 @@ module.exports = function (resourceRequest) {
         });
     }
 
-    var getInfoItem = function (hostIndex, hostInfo, callback) {
+    var getStatInfoItem = function (hostIndex, hostInfo, callback) {
         if (hostIndex >= hostInfo.length) {
             callback(null, hostInfo, hostStats);
         }
 
         else {
-            getInfoPerItem(hostIndex, 0, hostInfo, function (err, hostInfo) {
+                hostStats.push({
+                hostId:hostInfo[hostIndex].hostid,
+                itemInfo: []
+                  });
+                getStatInfoPerItem(hostIndex, 0, hostInfo, hostStats, function (err, hostInfo) {
                 if (!err) {
                     hostIndex++;
-                    getInfoItem(hostIndex, hostInfo, callback);
+                    getStatInfoItem(hostIndex, hostInfo, callback);
                 }
 
                 else {
@@ -170,7 +176,7 @@ module.exports = function (resourceRequest) {
         }
     }
 
-    var getInfoPerItem = function (hostIndex, itemIndex, hostInfo, callback) {
+    var getStatInfoPerItem = function (hostIndex, itemIndex, hostInfo, hostStats, callback) {
         if (itemIndex >= hostInfo[hostIndex].items.length) {
             callback(null, hostInfo, hostStats);
         }
@@ -194,13 +200,16 @@ module.exports = function (resourceRequest) {
                                 else {
                                     average = 0;
                                 }
-
-                                ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
-
-                                hostStats.push({
-                                    hostId: hostInfo[hostIndex].hostid,
+                                if(hostInfo[hostIndex].items[itemIndex].valueType == 0) {
+                                    var ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
+                                }
+                                else{
+                                    var ewma_new = average;
+                                }
+                                hostStats[hostIndex].itemInfo.push({
                                     itemId: hostInfo[hostIndex].items[itemIndex].id,
-                                    ewma_latest: ewma_new
+                                    itemKey: hostInfo[hostIndex].items[itemIndex].key,
+                                    value: ewma_new
                                 });
                             }
                             else {
@@ -215,14 +224,15 @@ module.exports = function (resourceRequest) {
                                 else {
                                     average = 0;
                                 }
-                                hostStats.push({
-                                    hostId: hostInfo[hostIndex].hostid,
+                                console.log(hostStats[hostIndex].hostid);
+                              hostStats[hostIndex].itemInfo.push({
                                     itemId: hostInfo[hostIndex].items[itemIndex].id,
-                                    ewma_latest: average
+                                    itemKey: hostInfo[hostIndex].items[itemIndex].key,
+                                    value: average
                                 });
                             }
                             itemIndex++;
-                            getInfoPerItem(hostIndex, itemIndex, hostInfo, callback);
+                            getStatInfoPerItem(hostIndex, itemIndex, hostInfo, hostStats, callback);
                         }
                         else {
                             throw err;
@@ -233,20 +243,36 @@ module.exports = function (resourceRequest) {
         }
     }
 
-    var insertItemInfo = function (statItemIndex, hostStats, callback) {
-
-        if (statItemIndex >= hostStats.length) {
+    var updateDBInfo = function (statHostIndex, hostStats, callback) {
+        if (statHostIndex >= hostStats.length) {
             callback(null, hostStats);
         }
         else {
-            var conditions = {zabbixItemID: hostStats[statItemIndex].itemId};
-            var update = { $set: {ewma_last: hostStats[statItemIndex].ewma_latest}};
+            updateDBInfoPerItem(statHostIndex, 0, hostStats, function(err, hostStats){
+                if(err){
+                    callback(err);
+                }
+                else{
+                    statHostIndex++;
+                    updateDBInfo(statHostIndex, hostStats, callback);
+                }
+            });
+        }
+    }
+
+    var updateDBInfoPerItem = function(statHostIndex, statItemIndex, hostStats, callback){
+        if(statItemIndex >= hostStats[statHostIndex].itemInfo.length){
+            callback(null, hostStats);
+        }
+        else {
+            var conditions = {zabbixItemID: hostStats[statHostIndex].itemInfo[statItemIndex].itemId};
+            var update = { $set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value}};
             var options = { upsert: true};
 
             EwmaSchema.update(conditions, update, options, function (err) {
                 if (!err) {
                     statItemIndex++;
-                    insertItemInfo(statItemIndex, hostStats, callback);
+                    updateDBInfoPerItem(statHostIndex, statItemIndex, hostStats, callback);
                 }
                 else {
                     callback(err);
@@ -255,12 +281,44 @@ module.exports = function (resourceRequest) {
         }
     }
 
+    var fetchPossibleHosts = function(resourceRequest, hostStats, callback){
+
+      /*  resourceRequest = resourceRequest.group[0];
+        console.log(resourceRequest);
+        console.log(parseInt(resourceRequest.min_memory[0].size[0]));
+
+        for(var i=0; i< hostStats.length; i++){
+            for(var j=0; j<hostStats[i].itemInfo.length; j++){
+               // if()
+                if(hostStats[i].itemInfo[j].itemKey=='vm.memory.size[available]'){
+                    if((parseInt(resourceRequest.min_memory[0].size[0])*1024*1024)<hostStats[i].itemInfo[j].ewma_last){
+                        //TODO: Unit conversion needed
+                        candidateHosts.push(hostStats[i]);
+
+                    }
+                }
+            }
+
+        }
+
+*/
+
+
+
+
+        callback(null, hostStats);
+    }
 
     var fetchCloudInfo = function (zSession, callback) {
-        calculateMovingAverage(zSession, function (err, hostInfo, hostStats) {
+        calculateMovingAverage(zSession, function (err,  hostStats) {
             ///filter hosts and pass candidate hosts and there resource utilization info to callback function
             // resourceRequest
-            callback(null, hostInfo, hostStats);
+            if(err){
+                callback(err);
+            }
+            else {
+                fetchPossibleHosts(resourceRequest, hostStats, callback);
+            }
         });
     }
 
