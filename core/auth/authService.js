@@ -24,8 +24,8 @@ module.exports = function(){
                         //userObj.loginTime = Date.now();         //include login time in the user object to create a unique session key
                         var sessionKey = md5(JSON.stringify(userObj)+Date.now());  //create unique session key from stringified user object
 
-                        var Session = require('../db/schemas/dbSession');
-                        var newSession = new Session({
+                        //var Session = require('../db/schemas/dbSession');
+                        var newSession = new UserSession({
                             //_id: userObj._id,      // This key is removed since a user may have multiple sessions
                             username: userObj.username,
                             sessionID: sessionKey,

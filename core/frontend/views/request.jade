@@ -2,59 +2,59 @@ extends layout
 
 block content
     script(type='text/javascript', src='/js/requestactions.js')
-    div.container
-        div.panel.panel-default
-            div.panel-heading
+    div
+        div
+            div
                 b #{title}
-            div.panel-body
+            div
                 form(role="form", method="post", action="/submit")
-                    div.panel.panel-success
-                        div.panel-heading
+                    div
+                        div
                             | Add a group
 
-                        div.panel-body
-                            div.row.form-group
-                                div.col-md-5
+                        div
+                            div
+                                div
                                     | Group name
-                                div.col-md-7
-                                    input(type='text', id='group-name').form-control
-                            div.row.form-group
-                                div.col-md-5
+                                div
+                                    input(type='text', id='group-name')
+                            div
+                                div
                                     | Group id
-                                div.col-md-7
-                                    input(type='text', id='group-id').form-control
-                            div.row.form-group
-                                div.col-md-1.col-md-offset-11
-                                    button(id='add-group').btn.btn-success
+                                div
+                                    input(type='text', id='group-id')
+                            div
+                                div
+                                    button(id='add-group')
                                         | Add
 
-                    div.panel.panel-success
-                        div.panel.panel-heading
+                    div
+                        div
                             | Add attributes
-                        div.panel.panel-body
-                            div.row
-                                div.col-md-2
+                        div
+                            div
+                                div
                                     label(for='select-group') Select group
-                                    select(id='select-group').form-control
+                                    select(id='select-group')
                                         option(value='none')= '-'
-                                div.col-md-2
+                                div
                                     label(for='select-attr') Select attribute
-                                    select(id='select-attr').form-control
-                                        each atr in attrs
-                                            option(value=atr.attr)=atr.name
+                                    select(id='select-attr')
+                                        //each atr in attrs
+                                            //option(value=atr.attr)=atr.name
 
-                                div.col-md-6
+                                div
                                     label(for='attr-values') Edit attribute
                                     div#attr-values
-                                div.col-md-2
+                                div
                                     label(for='attr-actions') Actions
-                                    div.row#attr-actions
-                                        div.col-md-4
-                                            button(id='add-attr').btn.btn-success.btn-sm Add
-                                        div.col-md-4
-                                            button(id='remove-attr').btn.btn-danger.btn-sm Remove
+                                    div#attr-actions
+                                        div
+                                            button(id='add-attr') Add
+                                        div
+                                            button(id='remove-attr') Remove
 
-                    button(type="submit").btn.btn-default
+                    button(type="submit")
                         | Submit request
 
 
