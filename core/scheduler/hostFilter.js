@@ -1,8 +1,8 @@
 module.exports = function (resourceRequest) {
 
+
     var hostStats = [];
     var hosts = [];
-    var candidateHosts = [];
     var averages = [];
     require('../../config');
 
@@ -282,31 +282,74 @@ module.exports = function (resourceRequest) {
     }
 
     var fetchPossibleHosts = function(resourceRequest, hostStats, callback){
+        var candidateHosts = [];
 
-      /*  resourceRequest = resourceRequest.group[0];
-        console.log(resourceRequest);
-        console.log(parseInt(resourceRequest.min_memory[0].size[0]));
+      resourceRequest = resourceRequest.group[0];
 
-        for(var i=0; i< hostStats.length; i++){
-            for(var j=0; j<hostStats[i].itemInfo.length; j++){
-               // if()
-                if(hostStats[i].itemInfo[j].itemKey=='vm.memory.size[available]'){
-                    if((parseInt(resourceRequest.min_memory[0].size[0])*1024*1024)<hostStats[i].itemInfo[j].ewma_last){
-                        //TODO: Unit conversion needed
-                        candidateHosts.push(hostStats[i]);
+        var memoryCandidateInfo = [];
+        var memoryCandidateHosts = [];
 
+      for(var i=0; i< hostStats.length; i++) {
+          for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+              if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
+                  if ((parseInt(resourceRequest.min_memory[0].size[0]) * 1024 * 1024) < hostStats[i].itemInfo[j].value) {
+                      //TODO: Unit conversion needed
+                      memoryCandidateInfo.push(hostStats[i].hostId);
+
+                      memoryCandidateHosts.push({
+                          hostId: hostStats[i].hostId,
+                          itemId: hostStats[i].itemInfo[j].itemId,
+                          itemKey: hostStats[i].itemInfo[j].itemKey,
+                          value: hostStats[i].itemInfo[j].value
+                      });
+
+
+                  }
+              }
+          }
+      }
+
+        for(var i=0; i< hostStats.length; i++) {
+            for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+
+                var itemInMemoryHosts = function (val) {
+                    var keys = memoryCandidateInfo;
+                    return keys.indexOf(val) > -1;
+                }
+                var hostno = -1;
+                if (hostStats[i].itemInfo[j].itemKey == 'system.cpu.num' && itemInMemoryHosts(hostStats[i].hostId) == true) {
+
+                    if ((parseInt(resourceRequest.cpu[0].cores[0])) < hostStats[i].itemInfo[j].value) {
+
+                        candidateHosts.push({
+                            hostId: hostStats[i].hostId,
+                            items: []
+                        });
+                        //this number will be increment each time when comes inside this if statement
+                         hostno = hostno + 1 ;
+
+                        candidateHosts[hostno].items.push({
+                            itemId: hostStats[i].itemInfo[j].itemId,
+                            itemKey: hostStats[i].itemInfo[j].itemKey,
+                            value: hostStats[i].itemInfo[j].value
+                        });
+
+                        for(var k=0; k<memoryCandidateHosts.length; k++){
+                            if(memoryCandidateHosts[k].hostId == hostStats[i].hostId){
+                                candidateHosts[hostno].items.push({
+                                    itemId: memoryCandidateHosts[k].itemId,
+                                    itemKey: memoryCandidateHosts[k].itemKey,
+                                    value: memoryCandidateHosts[k].value
+                                });
+                            }
+                        }
                     }
+
+
                 }
             }
-
-        }
-
-*/
-
-
-
-
-        callback(null, hostStats);
+      }
+       callback(null, candidateHosts);
     }
 
     var fetchCloudInfo = function (zSession, callback) {
@@ -317,7 +360,9 @@ module.exports = function (resourceRequest) {
                 callback(err);
             }
             else {
-                fetchPossibleHosts(resourceRequest, hostStats, callback);
+                fetchPossibleHosts(resourceRequest, hostStats, function(err, filteredCandidateHosts){
+                    console.log(JSON.stringify(filteredCandidateHosts));
+                });
             }
         });
     }
@@ -325,5 +370,6 @@ module.exports = function (resourceRequest) {
     return {
         fetchCloudInfo: fetchCloudInfo
     }
-
 }
+
+
