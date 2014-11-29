@@ -1,4 +1,4 @@
-module.exports = function(resourceRequest){
+module.exports = function (resourceRequest) {
 
     var hostStats = [];
     var hosts = [];
@@ -10,25 +10,26 @@ module.exports = function(resourceRequest){
 
     var db = require('../../core/db');
     var EwmaSchema = require('../db/schemas/dbItemEWMA');
+    var stats = require('stats-lite');
 
 
-    var attrContainsInKeys = function(val){
+    var attrContainsInKeys = function (val) {
         var keys = ZABBIX.SELECTED_ITEM_ATTR;
         return keys.indexOf(val) > -1;
     }
 
-    var fetchHostItemInfo = function(zSession, callback){
+    var fetchHostItemInfo = function (zSession, callback) {
 
-        var getHostItems = function(zapi, hostIndex, hosts, callback){
-           console.log("Host index"+ hostIndex);
-            if(hostIndex >= hosts.length){
+        var getHostItems = function (zapi, hostIndex, hosts, callback) {
+            console.log("Host index" + hostIndex);
+            if (hostIndex >= hosts.length) {
                 callback(null, hosts);
             }
-            else{
-                zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function(data, rawRes){
-                    if(!data.error){
-                        for(var j in data.result){
-                            if(attrContainsInKeys(data.result[j].key_) == true) {
+            else {
+                zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function (data, rawRes) {
+                    if (!data.error) {
+                        for (var j in data.result) {
+                            if (attrContainsInKeys(data.result[j].key_) == true) {
                                 hosts[hostIndex].items.push({
                                     id: data.result[j].itemid,
                                     key: data.result[j].key_,
@@ -39,7 +40,7 @@ module.exports = function(resourceRequest){
                         hostIndex++;
                         getHostItems(zapi, hostIndex, hosts, callback);
                     }
-                    else{
+                    else {
                         callback(data.error);
                     }
                 });
@@ -49,9 +50,9 @@ module.exports = function(resourceRequest){
 
         var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
         //call host.get method via zabbix api
-        zapi.exec(ZABBIX.METHODS.hostslist, {}, function(data, rawRes){
-            if(!data.error){
-                for(var i in data.result){
+        zapi.exec(ZABBIX.METHODS.hostslist, {}, function (data, rawRes) {
+            if (!data.error) {
+                for (var i in data.result) {
                     var host = data.result[i];
                     hosts.push({
                         hostid: host.hostid,
@@ -63,45 +64,45 @@ module.exports = function(resourceRequest){
                 //all items belongs to multiple hosts at once. But since when we limit response item count, items which
                 //belongs to some hosts will be cut off. So, we need to send new request for each host.
 
-                getHostItems(zapi, 0, hosts, function(error, hostObj){
+                getHostItems(zapi, 0, hosts, function (error, hostObj) {
                     callback(null, hostObj);
                 });
             }
-            else{
+            else {
                 callback(data.error);
             }
         });
     }
 
-    var fetchHostStats = function(zSession, callback){
-        fetchHostItemInfo(zSession, function(err, hostInfo){
+    var fetchHostStats = function (zSession, callback) {
+        fetchHostItemInfo(zSession, function (err, hostInfo) {
             var zapi = new (require('../../zabbix/api'))(zSession);
             getItemHistory(zapi, hostInfo, 0, callback);
         });
     }
 
-    var getItemHistory = function(zapi, hostInfo, hostIndex, callback){
-        if(hostIndex >= hostInfo.length){
+    var getItemHistory = function (zapi, hostInfo, hostIndex, callback) {
+        if (hostIndex >= hostInfo.length) {
             callback(null, hostInfo);
         }
-        else{
-            getHistoryPerItem(zapi, hostInfo, hostIndex, 0, function(err, hostInfo){
-                if(!err){
+        else {
+            getHistoryPerItem(zapi, hostInfo, hostIndex, 0, function (err, hostInfo) {
+                if (!err) {
                     hostIndex++;
                     getItemHistory(zapi, hostInfo, hostIndex, callback);
                 }
-                else{
+                else {
                     callback(err);
                 }
             });
         }
     }
 
-    var getHistoryPerItem = function(zapi, hostInfo, hostIndex, itemIndex, callback){
-        if(itemIndex >= (hostInfo[hostIndex]).items.length){
+    var getHistoryPerItem = function (zapi, hostInfo, hostIndex, itemIndex, callback) {
+        if (itemIndex >= (hostInfo[hostIndex]).items.length) {
             callback(null, hostInfo);
         }
-        else{
+        else {
 
             var params = {
                 output: "extend",
@@ -112,11 +113,11 @@ module.exports = function(resourceRequest){
                 limit: 2
             }
 
-            zapi.exec(ZABBIX.METHODS.history, params, function(data, res){
+            zapi.exec(ZABBIX.METHODS.history, params, function (data, res) {
 
-                if(!data.error){
+                if (!data.error) {
 
-                    for(var i in data.result){
+                    for (var i in data.result) {
                         hostInfo[hostIndex].items[itemIndex].historyItems.push({
                             item: data.result[i].itemid,
                             timestamp: data.result[i].clock,
@@ -129,7 +130,7 @@ module.exports = function(resourceRequest){
 
                     getHistoryPerItem(zapi, hostInfo, hostIndex, itemIndex, callback);
                 }
-                else{
+                else {
                     callback(data.error);
                 }
 
@@ -140,7 +141,7 @@ module.exports = function(resourceRequest){
     var calculateMovingAverage = function (zSession, callback) {
         fetchHostStats(zSession, function (error, hostInfo) {
             if (!error) {
-                getInfoItem(0, hostInfo, function(error, hostInfo, hostStats){
+                getInfoItem(0, hostInfo, function (error, hostInfo, hostStats) {
                     insertItemInfo(0, hostStats, callback);
                 });
             }
@@ -182,12 +183,20 @@ module.exports = function(resourceRequest){
                     configUpdater.readConfig(function (err, config) {
                         if (!err) {
                             if (item) {
-                                var average = 0;
-                                for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
-                                    average = average + parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                var average;
+                                var values = [];
+                                if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
+                                    for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                        values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                    }
+                                    average = stats.mean(values);
+                                }
+                                else {
+                                    average = 0;
                                 }
 
                                 ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
+
                                 hostStats.push({
                                     hostId: hostInfo[hostIndex].hostid,
                                     itemId: hostInfo[hostIndex].items[itemIndex].id,
@@ -195,9 +204,16 @@ module.exports = function(resourceRequest){
                                 });
                             }
                             else {
-                                var average = 0;
-                                for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
-                                    average = average + parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                var average;
+                                var values = [];
+                                if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
+                                    for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                        values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                                    }
+                                    average = stats.mean(values);
+                                }
+                                else {
+                                    average = 0;
                                 }
                                 hostStats.push({
                                     hostId: hostInfo[hostIndex].hostid,
@@ -217,7 +233,7 @@ module.exports = function(resourceRequest){
         }
     }
 
-    var insertItemInfo = function(statItemIndex, hostStats, callback) {
+    var insertItemInfo = function (statItemIndex, hostStats, callback) {
 
         if (statItemIndex >= hostStats.length) {
             callback(null, hostStats);
@@ -225,7 +241,7 @@ module.exports = function(resourceRequest){
         else {
             var conditions = {zabbixItemID: hostStats[statItemIndex].itemId};
             var update = { $set: {ewma_last: hostStats[statItemIndex].ewma_latest}};
-            var options = { upsert : true};
+            var options = { upsert: true};
 
             EwmaSchema.update(conditions, update, options, function (err) {
                 if (!err) {
@@ -240,10 +256,10 @@ module.exports = function(resourceRequest){
     }
 
 
-    var fetchCloudInfo = function (zSession, callback){
-        calculateMovingAverage(zSession, function(err, hostInfo, hostStats){
+    var fetchCloudInfo = function (zSession, callback) {
+        calculateMovingAverage(zSession, function (err, hostInfo, hostStats) {
             ///filter hosts and pass candidate hosts and there resource utilization info to callback function
-           // resourceRequest
+            // resourceRequest
             callback(null, hostInfo, hostStats);
         });
     }
