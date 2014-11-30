@@ -1,9 +1,9 @@
 //Cloudstack configuration
 
 CLOUDSTACK = {};
-CLOUDSTACK.API = "http://localhost:8080/client/api?";
-CLOUDSTACK.API_KEY = "tNuyVh4Kt1U2_6dJ9uyTvDy1G-MNZNRVq_OhIoFYARvzxI18hZnwrXceOf_Hz5CXSixvuIi4kfmSyS0EUf_IHA";
-CLOUDSTACK.SECRET_KEY = "GyROCzIRovuO31v82vBmPFVcpwY2pbmtszzUwJeRr6NkbXi2ttKqiVTAXwjPQyXM3c75FX4m8ZCh0NW8Zxi6gA";
+CLOUDSTACK.API = "http://10.8.106.208:8080/client/api?";
+CLOUDSTACK.API_KEY = "gQQEJNh_5v6pgohQG_xYPTHRgRyXUvqoaZMmxZXkdDFZxpp4_XaWzvwtFGIPz58Hf5Lkfbu8jZ09xIkcnNSVYw";
+CLOUDSTACK.SECRET_KEY = "szcpwWvdRp48ExEloj2V3E3rjaQfCO-Cqt69f1q-VTWtqVyKAZHd4Ajn9Fo6IDN2kPb0gpkOmzElikooKj41Pw";
 CLOUDSTACK.METHODS = {};
 
 //MongoDB configuration

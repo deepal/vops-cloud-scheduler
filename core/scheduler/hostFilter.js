@@ -1,5 +1,12 @@
 module.exports = function (resourceRequest) {
 
+    require('../../config');
+
+    var cloudstack = new (require('csclient'))({
+        serverURL: CLOUDSTACK.API,
+        apiKey: CLOUDSTACK.API_KEY,
+        secretKey: CLOUDSTACK.SECRET_KEY
+    });
 
     var hostStats = [];
     var hosts = [];
@@ -290,76 +297,121 @@ module.exports = function (resourceRequest) {
     }
 
     var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
-        var candidateHosts = [];
 
-        resourceRequest = resourceRequest.group[0];
-
-        var memoryCandidateInfo = [];
-        var memoryCandidateHosts = [];
-
-        //TODO: Needs checking for CPU load, CPU frequency and Storage(later) while considering cloudstack over provisioning ratios
-        for (var i = 0; i < hostStats.length; i++) {
-            for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
-                if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
-                    if ((parseInt(resourceRequest.min_memory[0].size[0]) * 1024 * 1024 * 1024) < hostStats[i].itemInfo[j].value) {
-                        //TODO: Unit conversion needed.
-                        memoryCandidateInfo.push(hostStats[i].hostId);
-
-                        memoryCandidateHosts.push({
-                            hostId: hostStats[i].hostId,
-                            itemId: hostStats[i].itemInfo[j].itemId,
-                            itemKey: hostStats[i].itemInfo[j].itemKey,
-                            value: hostStats[i].itemInfo[j].value
-                        });
-
-
-                    }
+        var getValueForCSConfigKey = function (listconfigurationsresponse, key) {
+            var config = listconfigurationsresponse.configuration;
+            for(var i in config){
+                if(config[i].name == key){
+                    return config[i].value;
                 }
             }
-        }
+            return 1;
+        };
 
-        for (var i = 0; i < hostStats.length; i++) {
-            for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+        cloudstack.execute('listConfigurations', {}, function(err, result){
+            if(err){
+                var cpuOPFactor = 1;
+                var memOPFactor = 1;
+                var storageOPFactor = 1;
+            }
+            else{
+                var cloudstackCpuOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'cpu.overprovisioning.factor');
+                var cloudstackMemOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'mem.overprovisioning.factor');
+                var cloudstackStorageOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'storage.overprovisioning.factor');
+            }
 
-                var itemInMemoryHosts = function (val) {
-                    var keys = memoryCandidateInfo;
-                    return keys.indexOf(val) > -1;
-                }
-                var hostno = -1;
-                if (hostStats[i].itemInfo[j].itemKey == 'system.cpu.num' && itemInMemoryHosts(hostStats[i].hostId) == true) {
+            var candidateHosts = [];
 
-                    if ((parseInt(resourceRequest.cpu[0].cores[0])) < hostStats[i].itemInfo[j].value) {
+            resourceRequest = resourceRequest.group[0];
 
-                        candidateHosts.push({
-                            hostId: hostStats[i].hostId,
-                            items: []
-                        });
-                        //this number will be increment each time when comes inside this if statement
-                        hostno = hostno + 1;
+            var memoryCandidateInfo = [];
+            var memoryCandidateHosts = [];
 
-                        candidateHosts[hostno].items.push({
-                            itemId: hostStats[i].itemInfo[j].itemId,
-                            itemKey: hostStats[i].itemInfo[j].itemKey,
-                            value: hostStats[i].itemInfo[j].value
-                        });
+            //TODO: Needs checking for CPU load, CPU frequency and Storage(later) while considering cloudstack over provisioning ratios
+            for (var i = 0; i < hostStats.length; i++) {
+                for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+                    if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
+                        var requestingMemory = parseInt(resourceRequest.min_memory[0].size[0]);
+                        switch ((resourceRequest.min_memory[0].unit[0]).toLowerCase()){
+                            case 'b':
+                                break;
+                            case 'kb':
+                                requestingMemory = requestingMemory * 1024;
+                                break;
+                            case 'mb':
+                                requestingMemory = requestingMemory * 1024 * 1024;
+                                break;
+                            case 'gb':
+                                requestingMemory = requestingMemory * 1024 * 1024 * 1024;
+                                break;
+                            case 'tb':
+                                requestingMemory = requestingMemory * 1024 * 1024 * 1024 * 2014;
+                                break;
+                            default :
+                                callback(responseInfo.error(403, "Unsupported unit for min_memory in resource request!"));
+                        }
 
-                        for (var k = 0; k < memoryCandidateHosts.length; k++) {
-                            if (memoryCandidateHosts[k].hostId == hostStats[i].hostId) {
-                                candidateHosts[hostno].items.push({
-                                    itemId: memoryCandidateHosts[k].itemId,
-                                    itemKey: memoryCandidateHosts[k].itemKey,
-                                    value: memoryCandidateHosts[k].value
-                                });
-                            }
+                        if (requestingMemory < hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
+                            memoryCandidateInfo.push(hostStats[i].hostId);
+
+                            memoryCandidateHosts.push({
+                                hostId: hostStats[i].hostId,
+                                itemId: hostStats[i].itemInfo[j].itemId,
+                                itemKey: hostStats[i].itemInfo[j].itemKey,
+                                value: hostStats[i].itemInfo[j].value
+                            });
+
                         }
                     }
-
-
                 }
             }
-        }
-        callback(null, candidateHosts);
-    }
+
+            for (var i = 0; i < hostStats.length; i++) {
+                for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+
+                    var itemInMemoryHosts = function (val) {
+                        var keys = memoryCandidateInfo;
+                        return keys.indexOf(val) > -1;
+                    }
+                    var hostno = -1;
+                    if (hostStats[i].itemInfo[j].itemKey == 'system.cpu.num' && itemInMemoryHosts(hostStats[i].hostId) == true) {
+                        //TODO: Unit conversion needed (GHz, MHz etc.)
+                        if ((parseInt(resourceRequest.cpu[0].cores[0])) <= hostStats[i].itemInfo[j].value) {
+
+                            candidateHosts.push({
+                                hostId: hostStats[i].hostId,
+                                items: []
+                            });
+                            //this number will be increment each time when comes inside this if statement
+                            hostno = hostno + 1;
+
+                            candidateHosts[hostno].items.push({
+                                itemId: hostStats[i].itemInfo[j].itemId,
+                                itemKey: hostStats[i].itemInfo[j].itemKey,
+                                value: hostStats[i].itemInfo[j].value
+                            });
+
+                            for (var k = 0; k < memoryCandidateHosts.length; k++) {
+                                if (memoryCandidateHosts[k].hostId == hostStats[i].hostId) {
+                                    candidateHosts[hostno].items.push({
+                                        itemId: memoryCandidateHosts[k].itemId,
+                                        itemKey: memoryCandidateHosts[k].itemKey,
+                                        value: memoryCandidateHosts[k].value
+                                    });
+                                }
+                            }
+                        }
+
+
+                    }
+                }
+            }
+            callback(null, candidateHosts);
+
+        });
+
+
+    };
 
     var fetchCloudInfo = function (zSession, callback) {
         calculateMovingAverage(zSession, function (err, hostStats) {
