@@ -362,6 +362,8 @@ module.exports = function (resourceRequest) {
             else {
                 fetchPossibleHosts(resourceRequest, hostStats, function(err, filteredCandidateHosts){
                     console.log(JSON.stringify(filteredCandidateHosts));
+                    callback(null, filteredCandidateHosts);
+
                 });
             }
         });
