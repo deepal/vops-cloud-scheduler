@@ -14,9 +14,9 @@ MONGO.HOST = "10.8.106.208";
 //Zabbix configuration
 
 ZABBIX = {};
-ZABBIX.API = "http://localhost/zabbix/api_jsonrpc.php";
+ZABBIX.API = "http://10.8.106.208/zabbix/api_jsonrpc.php";
 ZABBIX.USERNAME = "Admin";
-ZABBIX.PASSWORD = "zabbix";
+ZABBIX.PASSWORD = "vops.zabbix";
 ZABBIX.METHODS = {
     login: "user.login",
     history: "history.get",

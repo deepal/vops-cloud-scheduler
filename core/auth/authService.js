@@ -1,6 +1,3 @@
-/*
-This module provides authentication service for Resource scheduler
- */
 
 module.exports = function(){
 

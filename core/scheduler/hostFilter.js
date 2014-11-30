@@ -19,36 +19,39 @@ module.exports = function (resourceRequest) {
         return keys.indexOf(val) > -1;
     }
 
-    var fetchHostItemInfo = function (zSession, callback) {
-
-        var getHostItems = function (zapi, hostIndex, hosts, callback) {
-            if (hostIndex >= hosts.length) {
-                callback(null, hosts);
-            }
-            else {
-                zapi.exec(ZABBIX.METHODS.itemslist, {hostids: hosts[hostIndex].hostid, output: "extend"}, function (data, rawRes) {
-                    if (!data.error) {
-                        for (var j in data.result) {
-
-                            if (attrContainsInKeys(data.result[j].key_) == true) {
-                                hosts[hostIndex].items.push({
-                                    id: data.result[j].itemid,
-                                    key: data.result[j].key_,
-                                    valueType: parseInt(data.result[j].value_type),
-                                    historyItems: []
-                                });
-                            }
-                        }
-                        hostIndex++;
-                        getHostItems(zapi, hostIndex, hosts, callback);
-                    }
-                    else {
-                        callback(data.error);
-                    }
-                });
-            }
-
+    var getHostItems = function (zapi, hostIndex, hosts, callback) {
+        if (hostIndex >= hosts.length) {
+            callback(null, hosts);
         }
+        else {
+            zapi.exec(ZABBIX.METHODS.itemslist, {
+                hostids: hosts[hostIndex].hostid,
+                output: "extend"
+            }, function (data, rawRes) {
+                if (!data.error) {
+                    for (var j in data.result) {
+
+                        if (attrContainsInKeys(data.result[j].key_) == true) {
+                            hosts[hostIndex].items.push({
+                                id: data.result[j].itemid,
+                                key: data.result[j].key_,
+                                valueType: parseInt(data.result[j].value_type),
+                                historyItems: []
+                            });
+                        }
+                    }
+                    hostIndex++;
+                    getHostItems(zapi, hostIndex, hosts, callback);
+                }
+                else {
+                    callback(data.error);
+                }
+            });
+        }
+
+    }
+
+    var fetchHostItemInfo = function (zSession, callback) {
 
         var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
         //call host.get method via zabbix api
@@ -78,8 +81,13 @@ module.exports = function (resourceRequest) {
 
     var fetchHostStats = function (zSession, callback) {
         fetchHostItemInfo(zSession, function (err, hostInfo) {
-            var zapi = new (require('../../zabbix/api'))(zSession);
-            getItemHistory(zapi, hostInfo, 0, callback);
+            if (err) {
+                callback(err);
+            }
+            else {
+                var zapi = new (require('../../zabbix/api'))(zSession);
+                getItemHistory(zapi, hostInfo, 0, callback);
+            }
         });
     }
 
@@ -159,11 +167,11 @@ module.exports = function (resourceRequest) {
         }
 
         else {
-                hostStats.push({
-                hostId:hostInfo[hostIndex].hostid,
+            hostStats.push({
+                hostId: hostInfo[hostIndex].hostid,
                 itemInfo: []
-                  });
-                getStatInfoPerItem(hostIndex, 0, hostInfo, hostStats, function (err, hostInfo) {
+            });
+            getStatInfoPerItem(hostIndex, 0, hostInfo, hostStats, function (err, hostInfo) {
                 if (!err) {
                     hostIndex++;
                     getStatInfoItem(hostIndex, hostInfo, callback);
@@ -200,10 +208,10 @@ module.exports = function (resourceRequest) {
                                 else {
                                     average = 0;
                                 }
-                                if(hostInfo[hostIndex].items[itemIndex].valueType == 0) {
+                                if (hostInfo[hostIndex].items[itemIndex].valueType == 0) {
                                     var ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
                                 }
-                                else{
+                                else {
                                     var ewma_new = average;
                                 }
                                 hostStats[hostIndex].itemInfo.push({
@@ -225,7 +233,7 @@ module.exports = function (resourceRequest) {
                                     average = 0;
                                 }
                                 console.log(hostStats[hostIndex].hostid);
-                              hostStats[hostIndex].itemInfo.push({
+                                hostStats[hostIndex].itemInfo.push({
                                     itemId: hostInfo[hostIndex].items[itemIndex].id,
                                     itemKey: hostInfo[hostIndex].items[itemIndex].key,
                                     value: average
@@ -248,11 +256,11 @@ module.exports = function (resourceRequest) {
             callback(null, hostStats);
         }
         else {
-            updateDBInfoPerItem(statHostIndex, 0, hostStats, function(err, hostStats){
-                if(err){
+            updateDBInfoPerItem(statHostIndex, 0, hostStats, function (err, hostStats) {
+                if (err) {
                     callback(err);
                 }
-                else{
+                else {
                     statHostIndex++;
                     updateDBInfo(statHostIndex, hostStats, callback);
                 }
@@ -260,14 +268,14 @@ module.exports = function (resourceRequest) {
         }
     }
 
-    var updateDBInfoPerItem = function(statHostIndex, statItemIndex, hostStats, callback){
-        if(statItemIndex >= hostStats[statHostIndex].itemInfo.length){
+    var updateDBInfoPerItem = function (statHostIndex, statItemIndex, hostStats, callback) {
+        if (statItemIndex >= hostStats[statHostIndex].itemInfo.length) {
             callback(null, hostStats);
         }
         else {
             var conditions = {zabbixItemID: hostStats[statHostIndex].itemInfo[statItemIndex].itemId};
-            var update = { $set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value}};
-            var options = { upsert: true};
+            var update = {$set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value}};
+            var options = {upsert: true};
 
             EwmaSchema.update(conditions, update, options, function (err) {
                 if (!err) {
@@ -281,35 +289,36 @@ module.exports = function (resourceRequest) {
         }
     }
 
-    var fetchPossibleHosts = function(resourceRequest, hostStats, callback){
+    var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
         var candidateHosts = [];
 
-      resourceRequest = resourceRequest.group[0];
+        resourceRequest = resourceRequest.group[0];
 
         var memoryCandidateInfo = [];
         var memoryCandidateHosts = [];
 
-      for(var i=0; i< hostStats.length; i++) {
-          for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
-              if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
-                  if ((parseInt(resourceRequest.min_memory[0].size[0]) * 1024 * 1024) < hostStats[i].itemInfo[j].value) {
-                      //TODO: Unit conversion needed
-                      memoryCandidateInfo.push(hostStats[i].hostId);
+        //TODO: Needs checking for CPU load, CPU frequency and Storage(later) while considering cloudstack over provisioning ratios
+        for (var i = 0; i < hostStats.length; i++) {
+            for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+                if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
+                    if ((parseInt(resourceRequest.min_memory[0].size[0]) * 1024 * 1024 * 1024) < hostStats[i].itemInfo[j].value) {
+                        //TODO: Unit conversion needed.
+                        memoryCandidateInfo.push(hostStats[i].hostId);
 
-                      memoryCandidateHosts.push({
-                          hostId: hostStats[i].hostId,
-                          itemId: hostStats[i].itemInfo[j].itemId,
-                          itemKey: hostStats[i].itemInfo[j].itemKey,
-                          value: hostStats[i].itemInfo[j].value
-                      });
+                        memoryCandidateHosts.push({
+                            hostId: hostStats[i].hostId,
+                            itemId: hostStats[i].itemInfo[j].itemId,
+                            itemKey: hostStats[i].itemInfo[j].itemKey,
+                            value: hostStats[i].itemInfo[j].value
+                        });
 
 
-                  }
-              }
-          }
-      }
+                    }
+                }
+            }
+        }
 
-        for(var i=0; i< hostStats.length; i++) {
+        for (var i = 0; i < hostStats.length; i++) {
             for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
 
                 var itemInMemoryHosts = function (val) {
@@ -326,7 +335,7 @@ module.exports = function (resourceRequest) {
                             items: []
                         });
                         //this number will be increment each time when comes inside this if statement
-                         hostno = hostno + 1 ;
+                        hostno = hostno + 1;
 
                         candidateHosts[hostno].items.push({
                             itemId: hostStats[i].itemInfo[j].itemId,
@@ -334,8 +343,8 @@ module.exports = function (resourceRequest) {
                             value: hostStats[i].itemInfo[j].value
                         });
 
-                        for(var k=0; k<memoryCandidateHosts.length; k++){
-                            if(memoryCandidateHosts[k].hostId == hostStats[i].hostId){
+                        for (var k = 0; k < memoryCandidateHosts.length; k++) {
+                            if (memoryCandidateHosts[k].hostId == hostStats[i].hostId) {
                                 candidateHosts[hostno].items.push({
                                     itemId: memoryCandidateHosts[k].itemId,
                                     itemKey: memoryCandidateHosts[k].itemKey,
@@ -348,20 +357,19 @@ module.exports = function (resourceRequest) {
 
                 }
             }
-      }
-       callback(null, candidateHosts);
+        }
+        callback(null, candidateHosts);
     }
 
     var fetchCloudInfo = function (zSession, callback) {
-        calculateMovingAverage(zSession, function (err,  hostStats) {
+        calculateMovingAverage(zSession, function (err, hostStats) {
             ///filter hosts and pass candidate hosts and there resource utilization info to callback function
             // resourceRequest
-            if(err){
+            if (err) {
                 callback(err);
             }
             else {
-                fetchPossibleHosts(resourceRequest, hostStats, function(err, filteredCandidateHosts){
-                    console.log(JSON.stringify(filteredCandidateHosts));
+                fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts) {
                     callback(null, filteredCandidateHosts);
 
                 });

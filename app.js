@@ -43,7 +43,13 @@ var zabbixLoginCallback = function(data, res) {
     app.post('/configuration', routes.configWrite);
 
     console.log("Resource scheduler is waiting for requests...");
-    app.listen(3000);
+
+    if(sessID){
+        app.listen(3000);
+    }
+    else{
+        console.log("Zabbix Server login error! Check Zabbix connection and credentials.");
+    }
 
 }
 
