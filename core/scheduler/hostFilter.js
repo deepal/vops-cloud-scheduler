@@ -189,7 +189,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-    }
+    };
 
     var getStatInfoPerItem = function (hostIndex, itemIndex, hostInfo, hostStats, callback) {
         if (itemIndex >= hostInfo[hostIndex].items.length) {
@@ -310,9 +310,9 @@ module.exports = function (resourceRequest) {
 
         cloudstack.execute('listConfigurations', {}, function(err, result){
             if(err){
-                var cpuOPFactor = 1;
-                var memOPFactor = 1;
-                var storageOPFactor = 1;
+                var cloudstackCpuOPFactor = 1;
+                var cloudstackMemOPFactor = 1;
+                var cloudstackStorageOPFactor = 1;
             }
             else{
                 var cloudstackCpuOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'cpu.overprovisioning.factor');
@@ -321,11 +321,11 @@ module.exports = function (resourceRequest) {
             }
 
             var candidateHosts = [];
+            var memoryCandidateHosts = [];
 
             resourceRequest = resourceRequest.group[0];
 
-            var memoryCandidateInfo = [];
-            var memoryCandidateHosts = [];
+            console.log(JSON.stringify(hostStats));
 
             //TODO: Needs checking for CPU load, CPU frequency and Storage(later) while considering cloudstack over provisioning ratios
             for (var i = 0; i < hostStats.length; i++) {
@@ -352,62 +352,26 @@ module.exports = function (resourceRequest) {
                         }
 
                         if (requestingMemory < hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
-                            memoryCandidateInfo.push(hostStats[i].hostId);
-
-                            memoryCandidateHosts.push({
-                                hostId: hostStats[i].hostId,
-                                itemId: hostStats[i].itemInfo[j].itemId,
-                                itemKey: hostStats[i].itemInfo[j].itemKey,
-                                value: hostStats[i].itemInfo[j].value
-                            });
-
+                            memoryCandidateHosts.push(hostStats[i]);
                         }
                     }
                 }
             }
 
-            for (var i = 0; i < hostStats.length; i++) {
-                for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+            console.log("memoryCandidateHosts:"+JSON.stringify(memoryCandidateHosts));
 
-                    var itemInMemoryHosts = function (val) {
-                        var keys = memoryCandidateInfo;
-                        return keys.indexOf(val) > -1;
-                    }
-                    var hostno = -1;
-                    if (hostStats[i].itemInfo[j].itemKey == 'system.cpu.num' && itemInMemoryHosts(hostStats[i].hostId) == true) {
-                        //TODO: Unit conversion needed (GHz, MHz etc.)
-                        if ((parseInt(resourceRequest.cpu[0].cores[0])) <= hostStats[i].itemInfo[j].value) {
+            for (var i = 0; i < memoryCandidateHosts.length; i++) {
+                for (var j = 0; j < memoryCandidateHosts[i].itemInfo.length; j++) {
+                    if (memoryCandidateHosts[i].itemInfo[j].itemKey == 'system.cpu.num') {
+                        if ((parseInt(resourceRequest.cpu[0].cores[0])) <= memoryCandidateHosts[i].itemInfo[j].value) {
 
-                            candidateHosts.push({
-                                hostId: hostStats[i].hostId,
-                                items: []
-                            });
-                            //this number will be increment each time when comes inside this if statement
-                            hostno = hostno + 1;
-
-                            candidateHosts[hostno].items.push({
-                                itemId: hostStats[i].itemInfo[j].itemId,
-                                itemKey: hostStats[i].itemInfo[j].itemKey,
-                                value: hostStats[i].itemInfo[j].value
-                            });
-
-                            for (var k = 0; k < memoryCandidateHosts.length; k++) {
-                                if (memoryCandidateHosts[k].hostId == hostStats[i].hostId) {
-                                    candidateHosts[hostno].items.push({
-                                        itemId: memoryCandidateHosts[k].itemId,
-                                        itemKey: memoryCandidateHosts[k].itemKey,
-                                        value: memoryCandidateHosts[k].value
-                                    });
-                                }
-                            }
+                            candidateHosts.push(memoryCandidateHosts[i]);
                         }
-
-
                     }
                 }
             }
+            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
             callback(null, candidateHosts);
-
         });
 
 
