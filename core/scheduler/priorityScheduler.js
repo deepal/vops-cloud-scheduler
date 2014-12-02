@@ -1,6 +1,6 @@
 module.exports = function(){
 
-    var scheduleRequest = function(jsonAllocRequest, callback){
+    var scheduleRequest = function(authorizedRequest, callback){
 
         var Allocations = require('../db/schemas/dbAllocation');
         var responseMessage = require('../../config/responseMessages');
@@ -8,7 +8,7 @@ module.exports = function(){
 
         var migrationScheduler = new (require('./migrationScheduler'))();
 
-        migrationScheduler.findHostByMigration(jsonAllocRequest, function(error, selectedHost){
+        migrationScheduler.findHostByMigration(authorizedRequest, function(error, selectedHost){
 
             if(error){
                 callback(error);
@@ -20,7 +20,7 @@ module.exports = function(){
                 else{
                     Allocations.find({
                         allocationPriority: {
-                            $lt: jsonAllocRequest.requestContent.priority
+                            $lt: authorizedRequest.requestContent.priority
                         }
                     }).exec(function (err, allocations) {
                         if(err){
@@ -38,7 +38,7 @@ module.exports = function(){
 
                                     var preemptiveScheduler = new (require('./preemptiveScheduler'))();
 
-                                    preemptiveScheduler.findHostByPreemption(jsonAllocRequest, candidates, function (err, selectedHost) {
+                                    preemptiveScheduler.findHostByPreemption(authorizedRequest, candidates, function (err, selectedHost) {
                                         if(!err){
                                             callback(null, selectedHost);
                                         }

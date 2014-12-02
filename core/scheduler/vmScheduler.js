@@ -35,15 +35,15 @@ module.exports = function(zSession){
                         });
                     }
                     else{
-                        findBestHost(filteredHostsInfo, function (err, bestHost) {
-                            if(err){
-                                callback(err);
-                            }
-                            else{
-                                console.log(bestHost);
-                            }
-                        });
-
+                        console.log("Selected Host: "+ JSON.stringify(filteredHostsInfo[0]));
+                        //findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
+                        //    if(err){
+                        //        callback(err);
+                        //    }
+                        //    else{
+                        //        console.log(bestHost);
+                        //    }
+                        //});
                     }
                 });
             }
@@ -97,7 +97,7 @@ module.exports = function(zSession){
 
     };
 
-    var findBestHost = function(filteredHostsInfo, callback){
+    var findBestHost = function(filteredHostsInfo, authorizedRequest, callback){
 
         var getValueByKey = function(hostInfo, key){
             for(var i in hostInfo.items){
@@ -127,22 +127,65 @@ module.exports = function(zSession){
         }
         else{
             var bestHostZabbixID = null;
-            var minMemoryHostZabbixID = filteredHostsInfo[0].hostId;
-            var minCoresHostZabbixID = filteredHostsInfo[0].hostId;
-            var minCPUFreqHostZabbixID = filteredHostsInfo[0].hostId;
-            var minCPUUtilHostZabbixID = filteredHostsInfo[0].hostId;
+            var minMemoryHostInfo = filteredHostsInfo[0];
+            var minCoresHostInfo = filteredHostsInfo[0];
+            var minCPUFreqHostInfo = filteredHostsInfo[0];
+            var minCPUUtilHostInfo = filteredHostsInfo[0].hostId;
 
             for(var i in filteredHostsInfo){
-                if(getValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostZabbixID), 'vm.memory.size[available]')){
-                    minMemoryHostZabbixID = filteredHostsInfo[i].hostId;
+                if(getValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo), 'vm.memory.size[available]')){
+                    minMemoryHostInfo = filteredHostsInfo[i];
                 }
-                if(getValueByKey(filteredHostsInfo[i], 'system.cpu.num') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minCoresHostZabbixID), 'system.cpu.num')){
-                    minCoresHostZabbixID = filteredHostsInfo[i].hostId;
+                if(getValueByKey(filteredHostsInfo[i], 'system.cpu.num') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minCoresHostInfo), 'system.cpu.num')){
+                    minCoresHostInfo = filteredHostsInfo[i];
                 }
+                //TODO: need to do this for frequency as well
             }
 
-            console.log("mincoresZabbixId = "+minCoresHostZabbixID);
-            console.log("minmemoryZabbixId = "+minMemoryHostZabbixID);
+            //TODO: compare these two hosts and select the most suitable considering whether the request is memory-intensive or cpu-intensive
+
+            var requestingMemory = parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]);
+
+            switch ((authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase()){
+                case 'b':
+                    break;
+                case 'kb':
+                    requestingMemory = requestingMemory * 1024;
+                    break;
+                case 'mb':
+                    requestingMemory = requestingMemory * 1024 * 1024;
+                    break;
+                case 'gb':
+                    requestingMemory = requestingMemory * 1024 * 1024 * 1024;
+                    break;
+                case 'tb':
+                    requestingMemory = requestingMemory * 1024 * 1024 * 1024 * 2014;
+                    break;
+                default :
+                    callback(response.error(403, "Unsupported unit for min_memory in resource request!"));
+            }
+
+            var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
+            var requestingCPUFreq = parseFloat(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]);
+
+            switch ((authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase()){
+                case 'hz':
+                    break;
+                case 'khz':
+                    requestingCPUFreq = requestingCPUFreq * 1000;
+                    break;
+                case 'mhz':
+                    requestingCPUFreq = requestingCPUFreq * 1000 * 1000;
+                    break;
+                case 'ghz':
+                    requestingCPUFreq = requestingCPUFreq * 1000 * 1000 * 1000;
+                    break;
+                default :
+                    callback(response.error(403, "Unsupported unit for cpu frequency in resource request!"));
+            }
+
+            console.log("mincoresZabbixId = "+minCoresHostInfo.hostId);
+            console.log("minmemoryZabbixId = "+minMemoryHostInfo.hostId);
 
             //TODO: call getDBHostByZabbixId() here
             callback(null, true);
