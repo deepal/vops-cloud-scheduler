@@ -23,7 +23,7 @@ ZABBIX.METHODS = {
     hostslist: "host.get",
     itemslist: "item.get"
 };
-ZABBIX.SELECTED_ITEM_ATTR = ['vm.memory.size[available]', 'system.cpu.load', 'system.cpu.util','vm.memory.size[total]', 'system.cpu.num'];
+ZABBIX.SELECTED_ITEM_ATTR = ['vm.memory.size[available]', 'system.cpu.load', 'system.cpu.util','vm.memory.size[total]', 'system.cpu.num', 'system.hw.cpu'];
 
 //PriorityLevels
 PRIORITY = {};

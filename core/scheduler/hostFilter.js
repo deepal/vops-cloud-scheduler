@@ -250,7 +250,7 @@ module.exports = function (resourceRequest) {
                             getStatInfoPerItem(hostIndex, itemIndex, hostInfo, hostStats, callback);
                         }
                         else {
-                            throw err;
+                            callback(err);
                         }
                     });
                 }
@@ -320,14 +320,12 @@ module.exports = function (resourceRequest) {
                 var cloudstackStorageOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'storage.overprovisioning.factor');
             }
 
-            var candidateHosts = [];
-            var memoryCandidateHosts = [];
+            var candidateHosts = hostStats;
 
             resourceRequest = resourceRequest.group[0];
 
-            console.log(JSON.stringify(hostStats));
+            console.log(JSON.stringify(candidateHosts));
 
-            //TODO: Needs checking for CPU load, CPU frequency and Storage(later) while considering cloudstack over provisioning ratios
             for (var i = 0; i < hostStats.length; i++) {
                 for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
                     if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
@@ -351,30 +349,74 @@ module.exports = function (resourceRequest) {
                                 callback(responseInfo.error(403, "Unsupported unit for min_memory in resource request!"));
                         }
 
-                        if (requestingMemory < hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
-                            memoryCandidateHosts.push(hostStats[i]);
+                        if (requestingMemory >= hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
+                            candidateHosts.splice(i,1);
                         }
                     }
                 }
             }
 
-            console.log("memoryCandidateHosts:"+JSON.stringify(memoryCandidateHosts));
-
-            for (var i = 0; i < memoryCandidateHosts.length; i++) {
-                for (var j = 0; j < memoryCandidateHosts[i].itemInfo.length; j++) {
-                    if (memoryCandidateHosts[i].itemInfo[j].itemKey == 'system.cpu.num') {
-                        if ((parseInt(resourceRequest.cpu[0].cores[0])) <= memoryCandidateHosts[i].itemInfo[j].value) {
-
-                            candidateHosts.push(memoryCandidateHosts[i]);
+            console.log("memoryCandidateHosts:"+JSON.stringify(candidateHosts));
+            //Filtering Hosts with sufficient cores from those who already fulfill memory requirements
+            for (var i = 0; i < candidateHosts.length; i++) {
+                for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
+                    if (candidateHosts[i].itemInfo[j].itemKey == 'system.cpu.num') {
+                        if ((parseInt(resourceRequest.cpu[0].cores[0])) > candidateHosts[i].itemInfo[j].value) {
+                            candidateHosts.splice(i,1);
                         }
                     }
                 }
             }
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
             callback(null, candidateHosts);
+
+            //Filtering Hosts who have less than 70% CPU load from proposed candidate Hosts
+            for (var i = 0; i < candidateHosts.length; i++) {
+                for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
+                    if (candidateHosts[i].itemInfo[j].itemKey == 'system.cpu.util') {
+                        if (candidateHosts[i].itemInfo[j].value * cloudstackCpuOPFactor > 70) {
+                            candidateHosts.splice(i,1);
+                        }
+                    }
+                }
+            }
+            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
+            callback(null, candidateHosts);
+
+            //Filtering Hosts who have required CPU frequency
+            for (var i = 0; i < candidateHosts.length; i++) {
+                for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
+                    if (candidateHosts[i].itemInfo[j].itemKey == 'system.hw.cpu') {
+                        var requestingFrequency = resourceRequest.cpu[0].frequency[0];
+                        switch((resourceRequest.cpu[0].unit[0]).toLowerCase()){
+                            case 'hz':
+                                break;
+                            case 'khz':
+                                requestingFrequency = requestingFrequency * 1024;
+                                break;
+                            case 'mhz':
+                                requestingFrequency = requestingFrequency * 1024 * 1024;
+                                break;
+                            case 'ghz':
+                                requestingFrequency = requestingFrequency * 1024 * 1024 * 1024;
+                                break;
+                            case 'thz':
+                                requestingFrequency = requestingFrequency * 1024 * 1024 * 1024 * 2014;
+                                break;
+                            default :
+                                callback(responseInfo.error(403, "Unsupported unit for CPU frequency in resource request!"));
+                        }
+                        if (requestingFrequency > candidateHosts[i].itemInfo[j].value) {
+                            candidateHosts.splice(i,1);
+                        }
+                    }
+                }
+            }
+            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
+            callback(null, candidateHosts);
+
+            //TODO: Needs checking for Storage(later) while considering cloudstack over provisioning ratios
         });
-
-
     };
 
     var fetchCloudInfo = function (zSession, callback) {
@@ -387,7 +429,6 @@ module.exports = function (resourceRequest) {
             else {
                 fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts) {
                     callback(null, filteredCandidateHosts);
-
                 });
             }
         });

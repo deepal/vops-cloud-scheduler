@@ -1,7 +1,7 @@
 module.exports = function(){
     var validator = require('./adminValidator')();
     var jf = require('jsonfile');
-    var confFile = '/home/deepal/projects/VirtualOps/VirtualOps/config/globalConfig.json';
+    var confFile = '/home/vishmi/projects/VirtualOps/config/globalConfig.json';
     var readConfig = function (callback) {
         jf.readFile(confFile, function (err, obj) {
             if(err){
