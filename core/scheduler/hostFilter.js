@@ -298,6 +298,27 @@ module.exports = function (resourceRequest) {
 
     var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
 
+        var attrInKeys = function (attr, hostInfo) {
+            for(var k in hostInfo.itemInfo){
+                if(hostInfo.itemInfo[k].itemKey == attr){
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        var candidateHosts = hostStats;
+
+        for (var i = 0; i < candidateHosts.length; i++) {
+            for (var j = 0; j < ZABBIX.SELECTED_ITEM_ATTR.length; j++) {
+                if(!attrInKeys(ZABBIX.SELECTED_ITEM_ATTR[j], candidateHosts[i])){
+                    candidateHosts.splice(i,1);
+                    break;
+                }
+            }
+        }
+            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
+
         var getValueForCSConfigKey = function (listconfigurationsresponse, key) {
             var config = listconfigurationsresponse.configuration;
             for(var i in config){
@@ -320,11 +341,9 @@ module.exports = function (resourceRequest) {
                 var cloudstackStorageOPFactor = getValueForCSConfigKey(result.listconfigurationsresponse, 'storage.overprovisioning.factor');
             }
 
-            var candidateHosts = hostStats;
-
             resourceRequest = resourceRequest.group[0];
 
-            console.log(JSON.stringify(candidateHosts));
+          //  console.log(JSON.stringify(candidateHosts));
 
             for (var i = 0; i < hostStats.length; i++) {
                 for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
@@ -368,7 +387,6 @@ module.exports = function (resourceRequest) {
                 }
             }
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            callback(null, candidateHosts);
 
             //Filtering Hosts who have less than 70% CPU load from proposed candidate Hosts
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -381,7 +399,6 @@ module.exports = function (resourceRequest) {
                 }
             }
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            callback(null, candidateHosts);
 
             //Filtering Hosts who have required CPU frequency
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -392,16 +409,13 @@ module.exports = function (resourceRequest) {
                             case 'hz':
                                 break;
                             case 'khz':
-                                requestingFrequency = requestingFrequency * 1024;
+                                requestingFrequency = requestingFrequency * 1000;
                                 break;
                             case 'mhz':
-                                requestingFrequency = requestingFrequency * 1024 * 1024;
+                                requestingFrequency = requestingFrequency * 1000 * 1000;
                                 break;
                             case 'ghz':
-                                requestingFrequency = requestingFrequency * 1024 * 1024 * 1024;
-                                break;
-                            case 'thz':
-                                requestingFrequency = requestingFrequency * 1024 * 1024 * 1024 * 2014;
+                                requestingFrequency = requestingFrequency * 1000 * 1000 * 1000;
                                 break;
                             default :
                                 callback(responseInfo.error(403, "Unsupported unit for CPU frequency in resource request!"));
