@@ -3,6 +3,7 @@ module.exports = function(){
     var db = require('../db');
     var QueuedRequests = require('../db/schemas/dbQueuedRequest');
     var response = require('../../config/responseMessages');
+    var fetchedRequest;
 
     var queueRequest = function (authorizedRequest, callback) {
         var request = new QueuedRequests({
@@ -21,16 +22,40 @@ module.exports = function(){
         });
     }
 
-    var fetchQueuedRequest = function () {
+    var fetchQueuedRequest = function (callback) {
         //fetch the request with highest priority
-    }
-    
-    var trigger = function(){
+        QueuedRequests.find().sort('-requestPriority').exec(function (err, queuedRequests) {
+            if(!err) {
+                fetchedRequest = queuedRequests[0];
+                QueuedRequests.find({_id:fetchedRequest._id}).remove(function (err) {
+                  if(!err){
+                      callback(null, fetchedRequest);
+                  }
+                    else{
+                      callback(response.error(500, 'Database connection error!', err));
+                  }
+                });
 
-    }
+            }
+            else{
+                callback(response.error(500, 'Database connection error!', err));
+            }
+        });
+    };
+
+    var trigger = function(callback){
+        fetchQueuedRequest(function(err, fetchedRequest){
+            if(err){
+                callback(err);
+            }
+            else{
+                callback(null, fetchedRequest);
+            }
+        });
+    };
 
     return {
         queueRequest: queueRequest,
         trigger: trigger
     }
-}
+};
