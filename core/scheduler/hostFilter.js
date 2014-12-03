@@ -10,7 +10,6 @@ module.exports = function (resourceRequest) {
 
     var hostStats = [];
     var hosts = [];
-    var averages = [];
     require('../../config');
 
     var configUpdater = new (require("../admin/configUpdater"))();
@@ -24,7 +23,7 @@ module.exports = function (resourceRequest) {
     var attrContainsInKeys = function (val) {
         var keys = ZABBIX.SELECTED_ITEM_ATTR;
         return keys.indexOf(val) > -1;
-    }
+    };
 
     var getHostItems = function (zapi, hostIndex, hosts, callback) {
         if (hostIndex >= hosts.length) {
@@ -55,8 +54,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-
-    }
+    };
 
     var fetchHostItemInfo = function (zSession, callback) {
 
@@ -166,7 +164,7 @@ module.exports = function (resourceRequest) {
                 callback(error);
             }
         });
-    }
+    };
 
     var getStatInfoItem = function (hostIndex, hostInfo, callback) {
         if (hostIndex >= hostInfo.length) {
@@ -256,7 +254,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-    }
+    };
 
     var updateDBInfo = function (statHostIndex, hostStats, callback) {
         if (statHostIndex >= hostStats.length) {
@@ -273,7 +271,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-    }
+    };
 
     var updateDBInfoPerItem = function (statHostIndex, statItemIndex, hostStats, callback) {
         if (statItemIndex >= hostStats[statHostIndex].itemInfo.length) {
@@ -294,7 +292,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-    }
+    };
 
     var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
 
@@ -305,7 +303,7 @@ module.exports = function (resourceRequest) {
                 }
             }
             return false;
-        }
+        };
         
         var candidateHosts = hostStats;
 
@@ -446,11 +444,11 @@ module.exports = function (resourceRequest) {
                 });
             }
         });
-    }
+    };
 
     return {
         fetchCloudInfo: fetchCloudInfo
     }
-}
+};
 
 
