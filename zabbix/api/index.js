@@ -21,7 +21,7 @@ module.exports = function(sessionID){
         
         var returnData = {};
         returnData.status = null;
-        returnData.data = null
+        returnData.data = null;
 
         client.post(ZABBIX.API, args, function(resData,rawRes){
             callBack(resData, rawRes);

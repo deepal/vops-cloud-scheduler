@@ -12,7 +12,7 @@ module.exports = function(){
         //check whether given username and password match any of the users in the dbUser collection
         User.findOne({ username: username }).exec(function (err, userObj) {
             if(err){
-                callback(response.error(500, "Internal Server Error occurred !", err));
+                callback(response.error(500, "Database Error occurred !", err));
             }
             else{
                 if(userObj){

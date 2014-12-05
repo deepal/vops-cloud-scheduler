@@ -4,11 +4,13 @@ module.exports = function(zSession){
     var Allocation = require('../db/schemas/dbAllocation');
     var response = require('../../config/responseMessages');
 
+
+    //TODO: Pending test
     var requestForAllocation = function(jsonAllocRequest, callback){
 
         authService.authorizeResourceRequest(jsonAllocRequest, function(err, authorizedRequest){
             if(err){
-                callback(response.error(500, 'Internal Server Error!', err));
+                callback(err);
             }
             else{
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
@@ -44,6 +46,15 @@ module.exports = function(zSession){
                         //        console.log(bestHost);
                         //    }
                         //});
+
+                        allocateRequest(filteredHostsInfo[0], authorizedRequest, function (err, result) {
+                            if(err){
+                                callback(err);
+                            }
+                            else{
+                                callback(null, result);
+                            }
+                        });
                     }
                 });
             }
@@ -51,10 +62,29 @@ module.exports = function(zSession){
 
     };
 
+
+    //TODO: Pending test
     var requestForDeAllocation = function (jsonDeAllocRequest, callback) {
         //de-allocate resources using cloudstack api and execute callback.
     };
 
+    var createServiceOffering = function (authorizedRequest, callback) {
+        //TODO: create a service offering for VM here
+    };
+
+    var createDiskOffering = function (authorizedRequest, callback) {
+        //TODO: create a disk offering for VM here
+    };
+
+    var registerVMTemplate = function (authorizedRequest, callback) {
+        //TODO: register a template for VM here
+    };
+
+    var deployVM = function (selectedHost, authorizedRequest, callback) {
+        //TODO: Deploy VM here
+    };
+
+    //TODO: Pending test
     var allocateRequest = function (selectedHost, authorizedRequest, callback) {
         var cloudstack = new (require('csclient'))({
             serverURL: 'http://10.8.106.208:8080/client/api?',
@@ -64,32 +94,67 @@ module.exports = function(zSession){
 
         var thisAllocationId = (require('mongoose')).Types.ObjectId().toString();
 
-        cloudstack.execute('createInstanceGroup', { name: thisAllocationId }, function(err, result){
+        var DBHosts = require('../db/schemas/dbHost');
+
+        DBHosts.findOne({ zabbixID: selectedHost.hostId }).exec(function (err, sHost) {
             if(err){
-                callback(response.error(500, 'Cloudstack error!', err));
+                callback(response.error(500, 'Database Error!', err));
             }
             else{
-                //TODO: create a service offering for VM here
-                    //TODO: create a disk offering for VM here
-                        //TODO: register a template for VM here
-                            //TODO: Deploy VM here
-
-                //following part should come inside the callback of VM deployment cloudstack function
-                var allocation = new Allocation({
-                    _id: thisAllocationId,
-                    from: Date.now(),
-                    expires: null,
-                    userSession: authorizedRequest.session,
-                    allocationTimestamp: Date.now(),
-                    allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
-                    associatedHosts: [selectedHost],
-                    vmGroupID: result.createinstancegroupresponse.instancegroup.id,
-                    allocationRequestContent: authorizedRequest.requestContent
-                });
-
-                allocation.save(function (err) {
+                cloudstack.execute('createInstanceGroup', { name: thisAllocationId }, function(err, result){
                     if(err){
-                        response.error(500, 'Database Error!', err);
+                        callback(response.error(500, 'Cloudstack error!', err));
+                    }
+                    else{
+                        createServiceOffering(authorizedRequest, function (err, result) {
+                            if(err){
+                                callback(err);
+                            }
+                            else{
+                                createDiskOffering(authorizedRequest, function (err, result) {
+                                    if(err){
+                                        callback(err);
+                                    }
+                                    else{
+                                        registerVMTemplate(authorizedRequest, function (err, result) {
+                                            if(err){
+                                                callback(err);
+                                            }
+                                            else{
+                                                deployVM(sHost, authorizedRequest, function (err, result) {
+                                                    if(err){
+                                                        callback(err);
+                                                    }
+                                                    else{
+                                                        // Now, VM allocation is complete. It's time to add this allocation info to database
+                                                        var allocation = new Allocation({
+                                                            _id: thisAllocationId,
+                                                            from: Date.now(),
+                                                            expires: null,
+                                                            userSession: authorizedRequest.session,
+                                                            allocationTimestamp: Date.now(),
+                                                            allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
+                                                            associatedHosts: [sHost],
+                                                            vmGroupID: result.createinstancegroupresponse.instancegroup.id,
+                                                            allocationRequestContent: authorizedRequest.requestContent
+                                                        });
+
+                                                        allocation.save(function (err) {
+                                                            if(err){
+                                                                response.error(500, 'Database Error!', err);
+                                                            }
+                                                            else{
+                                                                callback(response.success(200, 'Resource allocation successful!', result));
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
                     }
                 });
             }
