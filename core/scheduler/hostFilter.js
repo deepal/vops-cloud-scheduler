@@ -423,11 +423,9 @@ module.exports = function (resourceRequest) {
                         }
                     }
                 }
-            }
+            }        
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            callback(null, candidateHosts);
-
-            //TODO: Needs checking for Storage(later) while considering cloudstack over provisioning ratios
+            callback(null, candidateHosts, hostStats);
         });
     };
 
@@ -439,8 +437,8 @@ module.exports = function (resourceRequest) {
                 callback(err);
             }
             else {
-                fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts) {
-                    callback(null, filteredCandidateHosts);
+                fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts, allHostInfo) {
+                    callback(null,filteredCandidateHosts, allHostInfo);
                 });
             }
         });

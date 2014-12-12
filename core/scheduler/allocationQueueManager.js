@@ -20,7 +20,7 @@ module.exports = function(){
                 callback(null, response.success('200', 'Request was queued') );
             }
         });
-    }
+    };
 
     var fetchQueuedRequest = function (callback) {
         //fetch the request with highest priority
