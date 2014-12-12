@@ -159,7 +159,6 @@ module.exports = function(zSession){
                 });
             }
         });
-
     };
 
     var findBestHost = function(filteredHostsInfo, authorizedRequest, callback){
@@ -255,7 +254,7 @@ module.exports = function(zSession){
             //TODO: call getDBHostByZabbixId() here
             callback(null, true);
         }
-    }
+    };
     
     var findBestStorage = function (filteredHostsInfo) {
         //TODO: find best storage
@@ -267,4 +266,4 @@ module.exports = function(zSession){
     }
 
 
-}
+};

@@ -1,7 +1,8 @@
 {
   "hostFilter": {
     "alpha": 0.1,
-    "ewma_last": 0
+    "ewma_last": 0,
+    "max_cpu_load_factor": 0.75
   },
   "allocationQueueManager": {},
   "preemptiveScheduler": {},

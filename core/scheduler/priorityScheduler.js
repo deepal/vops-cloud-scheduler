@@ -24,27 +24,22 @@ module.exports = function(){
                         }
                     }).exec(function (err, allocations) {
                         if(err){
-                            callback(responseMessage.error(500, 'Internal Server Error', err));
+                            callback(responseMessage.error(500, 'Database Error', err));
                         }
                         else{
                             if(allocations){
                                 if(allocations.length){
                                     //there are allocation with less priority than the coming, they can be preempted if useful
-                                    var candidates = []; //should be equal to the array of most suitable hosts which can be freed by suspending VMs
-
-                                    for(var i in allocations){
-                                        candidates = underscore.union(candidates, allocations[i].associatedHosts);
-                                    }
 
                                     var preemptiveScheduler = new (require('./preemptiveScheduler'))();
 
-                                    preemptiveScheduler.findHostByPreemption(authorizedRequest, candidates, function (err, selectedHost) {
+                                    preemptiveScheduler.findHostByPreemption(authorizedRequest, allocations, function (err, selectedHost) {
                                         if(!err){
                                             callback(null, selectedHost);
                                         }
                                         else{
                                             //If no host was found either using migration scheduler or preemptive scheduler, just return result message to the vm scheduler.
-                                            callback(responseMessage.error('200','No enough resource to serve your request at this moment !'));
+                                            callback(err);
                                         }
                                     });
                                 }
@@ -63,10 +58,10 @@ module.exports = function(){
 
         });
 
-    }
+    };
 
     return {
         scheduleRequest: scheduleRequest
     }
 
-}
+};

@@ -6,7 +6,6 @@ module.exports = mongoose.model('DBAllocation', {
     userSession: Object,
     allocationTimestamp: Date,
     allocationPriority: Number,
-    associatedHosts: Array,
     vmGroupID: Number,
     allocationRequestContent: Object
 });
