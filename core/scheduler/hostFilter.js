@@ -19,6 +19,8 @@ module.exports = function (resourceRequest) {
     var EwmaSchema = require('../db/schemas/dbItemEWMA');
     var stats = require('stats-lite');
 
+    var _ = require('underscore');
+
 
     var attrContainsInKeys = function (val) {
         var keys = ZABBIX.SELECTED_ITEM_ATTR;
@@ -35,7 +37,7 @@ module.exports = function (resourceRequest) {
                 output: "extend"
             }, function (data, rawRes) {
                 if (!data.error) {
-                    for (var j in data.result) {
+                    for (var j =0; j< data.result.length; j++) {
 
                         if (attrContainsInKeys(data.result[j].key_) == true) {
                             hosts[hostIndex].items.push({
@@ -62,7 +64,7 @@ module.exports = function (resourceRequest) {
         //call host.get method via zabbix api
         zapi.exec(ZABBIX.METHODS.hostslist, {}, function (data, rawRes) {
             if (!data.error) {
-                for (var i in data.result) {
+                for (var i =0; i<data.result.length; i++) {
                     var host = data.result[i];
                     hosts.push({
                         hostid: host.hostid,
@@ -132,7 +134,7 @@ module.exports = function (resourceRequest) {
 
                 if (!data.error) {
 
-                    for (var i in data.result) {
+                    for (var i=0; i< data.result.length; i++) {
                         hostInfo[hostIndex].items[itemIndex].historyItems.push({
                             item: data.result[i].itemid,
                             timestamp: data.result[i].clock,
@@ -237,7 +239,6 @@ module.exports = function (resourceRequest) {
                                 else {
                                     average = 0;
                                 }
-                                console.log(hostStats[hostIndex].hostid);
                                 hostStats[hostIndex].itemInfo.push({
                                     itemId: hostInfo[hostIndex].items[itemIndex].id,
                                     itemKey: hostInfo[hostIndex].items[itemIndex].key,
@@ -297,7 +298,7 @@ module.exports = function (resourceRequest) {
     var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
 
         var attrInKeys = function (attr, hostInfo) {
-            for(var k in hostInfo.itemInfo){
+            for(var k=0; k< hostInfo.itemInfo.length; k++){
                 if(hostInfo.itemInfo[k].itemKey == attr){
                     return true;
                 }
@@ -305,21 +306,21 @@ module.exports = function (resourceRequest) {
             return false;
         };
         
-        var candidateHosts = hostStats;
+        var candidateHosts = _.clone(hostStats);
 
         for (var i = 0; i < candidateHosts.length; i++) {
             for (var j = 0; j < ZABBIX.SELECTED_ITEM_ATTR.length; j++) {
                 if(!attrInKeys(ZABBIX.SELECTED_ITEM_ATTR[j], candidateHosts[i])){
                     candidateHosts.splice(i,1);
+                    i= i-1;
                     break;
                 }
             }
         }
-            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
 
         var getValueForCSConfigKey = function (listconfigurationsresponse, key) {
             var config = listconfigurationsresponse.configuration;
-            for(var i in config){
+            for(var i =0;  i< config.length; i++){
                 if(config[i].name == key){
                     return config[i].value;
                 }
@@ -341,11 +342,9 @@ module.exports = function (resourceRequest) {
 
             resourceRequest = resourceRequest.group[0];
 
-          //  console.log(JSON.stringify(candidateHosts));
-
-            for (var i = 0; i < hostStats.length; i++) {
-                for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
-                    if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
+            for (var i = 0; i < candidateHosts.length; i++) {
+                for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
+                    if (candidateHosts[i].itemInfo[j].itemKey == 'vm.memory.size[available]') {
                         var requestingMemory = parseInt(resourceRequest.min_memory[0].size[0]);
                         switch ((resourceRequest.min_memory[0].unit[0]).toLowerCase()){
                             case 'b':
@@ -366,8 +365,10 @@ module.exports = function (resourceRequest) {
                                 callback(responseInfo.error(403, "Unsupported unit for min_memory in resource request!"));
                         }
 
-                        if (requestingMemory >= hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
+                        if (requestingMemory >= candidateHosts[i].itemInfo[j].value * cloudstackMemOPFactor) {
                             candidateHosts.splice(i,1);
+                            i = i-1;
+                            break;
                         }
                     }
                 }
@@ -380,11 +381,12 @@ module.exports = function (resourceRequest) {
                     if (candidateHosts[i].itemInfo[j].itemKey == 'system.cpu.num') {
                         if ((parseInt(resourceRequest.cpu[0].cores[0])) > candidateHosts[i].itemInfo[j].value) {
                             candidateHosts.splice(i,1);
+                            i = i-1;
+                            break;
                         }
                     }
                 }
             }
-            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
 
             //Filtering Hosts who have less than 70% CPU load from proposed candidate Hosts
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -392,11 +394,12 @@ module.exports = function (resourceRequest) {
                     if (candidateHosts[i].itemInfo[j].itemKey == 'system.cpu.util') {
                         if (candidateHosts[i].itemInfo[j].value * cloudstackCpuOPFactor > 70) {
                             candidateHosts.splice(i,1);
+                            i = i-1;
+                            break;
                         }
                     }
                 }
             }
-            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
 
             //Filtering Hosts who have required CPU frequency
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -420,11 +423,14 @@ module.exports = function (resourceRequest) {
                         }
                         if (requestingFrequency > candidateHosts[i].itemInfo[j].value) {
                             candidateHosts.splice(i,1);
+                            i = i-1;
+                            break;
                         }
                     }
                 }
             }        
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
+            console.log("allHostInfo:"+ JSON.stringify(hostStats));
             callback(null, candidateHosts, hostStats);
         });
     };

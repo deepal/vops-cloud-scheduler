@@ -129,11 +129,7 @@ module.exports = function(){
                     });
                 }
                 else{
-                    callback({
-                        status: 'Error',
-                        message: 'Please login first !',
-                        errorObject: err
-                    });
+                    callback(response.error(403, "Please login to Smart Cloud Scheduler!", err));
                 }
             }
         });
