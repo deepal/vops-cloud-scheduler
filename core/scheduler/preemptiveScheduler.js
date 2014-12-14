@@ -1,6 +1,6 @@
 module.exports = function(){
 
-    var findHostByPreemption = function(jsonAllocRequest, allocations, callback){
+    var findHostByPreemption = function(authorizedRequest, allocations, allHostInfo, callback){
 
     };
 

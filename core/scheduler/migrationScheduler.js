@@ -1,7 +1,8 @@
 module.exports = function(){
 
-    var findHostByMigration = function(jsonAllocRequest, callback){
-
+    var findHostByMigration = function(authorizedRequest, allHostInfo, callback){
+        console.log(allHostInfo);
+        console.log(authorizedRequest);
     };
 
     return {

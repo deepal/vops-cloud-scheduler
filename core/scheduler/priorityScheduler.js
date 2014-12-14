@@ -1,6 +1,6 @@
 module.exports = function(){
 
-    var scheduleRequest = function(authorizedRequest, callback){
+    var scheduleRequest = function(authorizedRequest, allHostInfo, callback){
 
         var Allocations = require('../db/schemas/dbAllocation');
         var responseMessage = require('../../config/responseMessages');
@@ -8,7 +8,7 @@ module.exports = function(){
 
         var migrationScheduler = new (require('./migrationScheduler'))();
 
-        migrationScheduler.findHostByMigration(authorizedRequest, function(error, selectedHost){
+        migrationScheduler.findHostByMigration(authorizedRequest, allHostInfo, function(error, selectedHost){
 
             if(error){
                 callback(error);
@@ -33,7 +33,7 @@ module.exports = function(){
 
                                     var preemptiveScheduler = new (require('./preemptiveScheduler'))();
 
-                                    preemptiveScheduler.findHostByPreemption(authorizedRequest, allocations, function (err, selectedHost) {
+                                    preemptiveScheduler.findHostByPreemption(authorizedRequest, allocations, allHostInfo, function (err, selectedHost) {
                                         if(!err){
                                             callback(null, selectedHost);
                                         }

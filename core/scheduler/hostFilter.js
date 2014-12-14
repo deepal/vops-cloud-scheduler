@@ -201,6 +201,7 @@ module.exports = function (resourceRequest) {
                     responseInfo.error(500, "Internal Server Error !", err);
                 }
                 else {
+                    //TODO: When config file is read recursively, high IO overhead. Instead, read it once and use read config object
                     configUpdater.readConfig(function (err, config) {
                         if (!err) {
                             if (item) {
@@ -249,7 +250,7 @@ module.exports = function (resourceRequest) {
                             getStatInfoPerItem(hostIndex, itemIndex, hostInfo, hostStats, callback);
                         }
                         else {
-                            callback(err);
+                            callback(responseInfo.error(500, "Scheduler Configuration could not be read!", err));
                         }
                     });
                 }
