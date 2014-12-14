@@ -42,6 +42,8 @@ var zabbixLoginCallback = function(data, res) {
 
     app.post('/configuration', routes.configWrite);
 
+    app.post('/debug/storage', routes.storageDebug);
+
     console.log("Resource scheduler is waiting for requests...");
 
     if(sessID){

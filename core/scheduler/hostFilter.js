@@ -365,7 +365,7 @@ module.exports = function (resourceRequest) {
                                 callback(responseInfo.error(403, "Unsupported unit for min_memory in resource request!"));
                         }
 
-                        if (requestingMemory >= candidateHosts[i].itemInfo[j].value * cloudstackMemOPFactor) {
+                        if (requestingMemory > candidateHosts[i].itemInfo[j].value * cloudstackMemOPFactor) {
                             candidateHosts.splice(i,1);
                             i = i-1;
                             break;

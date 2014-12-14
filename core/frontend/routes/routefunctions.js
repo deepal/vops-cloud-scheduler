@@ -67,6 +67,19 @@ var configRead = function (req, res) {
     res.send("");
 }
 
+var storageDebug = function (req,res) {
+    var storageFilter = require('../../scheduler/storageFilter')();
+    storageFilter.findPossibleStorageHosts(req.body.resource_request, function (err, result) {
+        if(!err){
+            console.log(JSON.stringify(result));
+            res.send(result);
+        }
+        else{
+            res.status(500).send(err);
+        }
+    })
+}
+
 module.exports = {
     resError: resError,
     resSuccess: resSuccess,
@@ -77,5 +90,6 @@ module.exports = {
     adminCreateUser: adminCreateUser,
     login: login,
     configWrite: configWrite,
-    configRead: configRead
+    configRead: configRead,
+    storageDebug:storageDebug
 }
