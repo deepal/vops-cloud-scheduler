@@ -373,8 +373,8 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-
             console.log("memoryCandidateHosts:"+JSON.stringify(candidateHosts));
+
             //Filtering Hosts with sufficient cores from those who already fulfill memory requirements
             for (var i = 0; i < candidateHosts.length; i++) {
                 for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
@@ -428,10 +428,43 @@ module.exports = function (resourceRequest) {
                         }
                     }
                 }
-            }        
+            }
+
+            var possibleMemoryHosts = [];
+
+            for (var i = 0; i < hostStats.length; i++) {
+                for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
+                    if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[total]') {
+                        var requestingMemory = parseInt(resourceRequest.min_memory[0].size[0]);
+                        switch ((resourceRequest.min_memory[0].unit[0]).toLowerCase()){
+                            case 'b':
+                                break;
+                            case 'kb':
+                                requestingMemory = requestingMemory * 1024;
+                                break;
+                            case 'mb':
+                                requestingMemory = requestingMemory * 1024 * 1024;
+                                break;
+                            case 'gb':
+                                requestingMemory = requestingMemory * 1024 * 1024 * 1024;
+                                break;
+                            case 'tb':
+                                requestingMemory = requestingMemory * 1024 * 1024 * 1024 * 2014;
+                                break;
+                            default :
+                                callback(responseInfo.error(403, "Unsupported unit for min_memory in resource request!"));
+                        }
+
+                        if (requestingMemory < hostStats[i].itemInfo[j].value * cloudstackMemOPFactor) {
+                            possibleMemoryHosts.push(hostStats[i]);
+                        }
+                    }
+                }
+            }
+
+            console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
             console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            console.log("allHostInfo:"+ JSON.stringify(hostStats));
-            callback(null, candidateHosts, hostStats);
+            callback(null, candidateHosts, possibleMemoryHosts);
         });
     };
 
@@ -443,8 +476,8 @@ module.exports = function (resourceRequest) {
                 callback(err);
             }
             else {
-                fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts, allHostInfo) {
-                    callback(null,filteredCandidateHosts, allHostInfo);
+                fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts, possibleMemoryHosts) {
+                    callback(null,filteredCandidateHosts, possibleMemoryHosts);
                 });
             }
         });
