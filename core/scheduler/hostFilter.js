@@ -158,8 +158,15 @@ module.exports = function (resourceRequest) {
     var calculateMovingAverage = function (zSession, callback) {
         fetchHostStats(zSession, function (error, hostInfo) {
             if (!error) {
-                getStatInfoItem(0, hostInfo, function (error, hostInfo, hostStats) {
-                    updateDBInfo(0, hostStats, callback);
+                configUpdater.readConfig(function(err, config){
+                    if(!err){
+                        getStatInfoItem(0, hostInfo,config, function (error, hostInfo, hostStats) {
+                            updateDBInfo(0, hostStats, callback);
+                        });
+                    }
+                    else{
+                        callback(err);
+                    }
                 });
             }
             else {
@@ -168,7 +175,7 @@ module.exports = function (resourceRequest) {
         });
     };
 
-    var getStatInfoItem = function (hostIndex, hostInfo, callback) {
+    var getStatInfoItem = function (hostIndex, hostInfo, config,  callback) {
         if (hostIndex >= hostInfo.length) {
             callback(null, hostInfo, hostStats);
         }
@@ -178,10 +185,10 @@ module.exports = function (resourceRequest) {
                 hostId: hostInfo[hostIndex].hostid,
                 itemInfo: []
             });
-            getStatInfoPerItem(hostIndex, 0, hostInfo, hostStats, function (err, hostInfo) {
+            getStatInfoPerItem(hostIndex, 0, hostInfo, hostStats, config, function (err, hostInfo) {
                 if (!err) {
                     hostIndex++;
-                    getStatInfoItem(hostIndex, hostInfo, callback);
+                    getStatInfoItem(hostIndex, hostInfo, config, callback);
                 }
 
                 else {
@@ -191,7 +198,7 @@ module.exports = function (resourceRequest) {
         }
     };
 
-    var getStatInfoPerItem = function (hostIndex, itemIndex, hostInfo, hostStats, callback) {
+    var getStatInfoPerItem = function (hostIndex, itemIndex, hostInfo, hostStats, config, callback) {
         if (itemIndex >= hostInfo[hostIndex].items.length) {
             callback(null, hostInfo, hostStats);
         }
@@ -201,58 +208,51 @@ module.exports = function (resourceRequest) {
                     responseInfo.error(500, "Internal Server Error !", err);
                 }
                 else {
-                    configUpdater.readConfig(function (err, config) {
-                        if (!err) {
-                            if (item) {
-                                var average;
-                                var values = [];
-                                if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
-                                    for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
-                                        values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
-                                    }
-                                    average = stats.mean(values);
-                                }
-                                else {
-                                    average = 0;
-                                }
-                                if (hostInfo[hostIndex].items[itemIndex].valueType == 0) {
-                                    var ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
-                                }
-                                else {
-                                    var ewma_new = average;
-                                }
-                                hostStats[hostIndex].itemInfo.push({
-                                    itemId: hostInfo[hostIndex].items[itemIndex].id,
-                                    itemKey: hostInfo[hostIndex].items[itemIndex].key,
-                                    value: ewma_new
-                                });
+                    if (item) {
+                        var average;
+                        var values = [];
+                        if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
+                            for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
                             }
-                            else {
-                                var average;
-                                var values = [];
-                                if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
-                                    for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
-                                        values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
-                                    }
-                                    average = stats.mean(values);
-                                }
-                                else {
-                                    average = 0;
-                                }
-                                hostStats[hostIndex].itemInfo.push({
-                                    itemId: hostInfo[hostIndex].items[itemIndex].id,
-                                    itemKey: hostInfo[hostIndex].items[itemIndex].key,
-                                    value: average
-                                });
-                            }
-                            itemIndex++;
-                            getStatInfoPerItem(hostIndex, itemIndex, hostInfo, hostStats, callback);
+                            average = stats.mean(values);
                         }
                         else {
-                            callback(err);
+                            average = 0;
                         }
-                    });
-                }
+                        if (hostInfo[hostIndex].items[itemIndex].valueType == 0) {
+                            var ewma_new = (config.hostFilter.alpha) * parseFloat(item.ewma_last) + (1 - (config.hostFilter.alpha)) * average;
+                        }
+                        else {
+                            var ewma_new = average;
+                        }
+                        hostStats[hostIndex].itemInfo.push({
+                            itemId: hostInfo[hostIndex].items[itemIndex].id,
+                            itemKey: hostInfo[hostIndex].items[itemIndex].key,
+                            value: ewma_new
+                        });
+                    }
+                    else {
+                        var average;
+                        var values = [];
+                        if (hostInfo[hostIndex].items[itemIndex].historyItems.length) {
+                            for (var i = 0; i < hostInfo[hostIndex].items[itemIndex].historyItems.length; i++) {
+                                values[i] = parseFloat(hostInfo[hostIndex].items[itemIndex].historyItems[i].value);
+                            }
+                            average = stats.mean(values);
+                        }
+                        else {
+                            average = 0;
+                        }
+                        hostStats[hostIndex].itemInfo.push({
+                            itemId: hostInfo[hostIndex].items[itemIndex].id,
+                            itemKey: hostInfo[hostIndex].items[itemIndex].key,
+                            value: average
+                        });
+                    }
+                    itemIndex++;
+                    getStatInfoPerItem(hostIndex, itemIndex, hostInfo, hostStats, config, callback);
+            }
             });
         }
     };
