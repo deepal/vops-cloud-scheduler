@@ -14,12 +14,12 @@ module.exports = function(zSession){
             }
             else{
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
-                hostFilter.fetchCloudInfo(zSession, function(err, filteredHostsInfo){
+                hostFilter.fetchCloudInfo(zSession, function(err, filteredHostsInfo, allHostInfo){
 
                     if(filteredHostsInfo.length == 0){
                         var priorityScheduler = new (require('./priorityScheduler'))();
                         /// do whatever you do with priority scheduler
-                        priorityScheduler.scheduleRequest(authorizedRequest, function(err, selectedHost){
+                        priorityScheduler.scheduleRequest(authorizedRequest, allHostInfo, function(err, selectedHost){
                             // results returned from migration scheduler or preemptive scheduler
                             if(!err){
                                 allocateRequest(selectedHost, authorizedRequest, function (err, result) {
@@ -256,7 +256,7 @@ module.exports = function(zSession){
         }
     };
     
-    var findBestStorage = function (filteredHostsInfo) {
+    var findBestStorage = function (filteredStorageInfo) {
         //TODO: find best storage
     };
 
