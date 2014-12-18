@@ -36,7 +36,7 @@ module.exports = function(){
                 }
             }
         });
-    }
+    };
 
     var writeConfig = function (adminSessID, configObj, callback){
         validator.validateAdmin(adminSessID, function(err, res){

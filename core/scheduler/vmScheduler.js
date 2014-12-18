@@ -14,22 +14,26 @@ module.exports = function(zSession){
             }
             else{
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
-                hostFilter.fetchCloudInfo(zSession, function(err, filteredHostsInfo, allHostInfo){
+                hostFilter.fetchCloudInfo(zSession, function(err, filteredHostsInfo, allPossibleHosts){
 
                     if(filteredHostsInfo.length == 0){
                         var priorityScheduler = new (require('./priorityScheduler'))();
                         /// do whatever you do with priority scheduler
-                        priorityScheduler.scheduleRequest(authorizedRequest, allHostInfo, function(err, selectedHost){
+                        priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function(err, selectedHost){
                             // results returned from migration scheduler or preemptive scheduler
                             if(!err){
-                                allocateRequest(selectedHost, authorizedRequest, function (err, result) {
-                                    if(err){
-                                        callback(err);
-                                    }
-                                    else{
-                                        callback(null, result);
-                                    }
-                                });
+
+                                //TODO: remove this
+                                callback(null, selectedHost);
+
+                                //allocateRequest(selectedHost, authorizedRequest, function (err, result) {
+                                //    if(err){
+                                //        callback(err);
+                                //    }
+                                //    else{
+                                //        callback(null, result);
+                                //    }
+                                //});
                             }
                             else{
                                 callback(err);
@@ -87,9 +91,9 @@ module.exports = function(zSession){
     //TODO: Pending test
     var allocateRequest = function (selectedHost, authorizedRequest, callback) {
         var cloudstack = new (require('csclient'))({
-            serverURL: 'http://10.8.106.208:8080/client/api?',
-            apiKey: 'gQQEJNh_5v6pgohQG_xYPTHRgRyXUvqoaZMmxZXkdDFZxpp4_XaWzvwtFGIPz58Hf5Lkfbu8jZ09xIkcnNSVYw',
-            secretKey: 'szcpwWvdRp48ExEloj2V3E3rjaQfCO-Cqt69f1q-VTWtqVyKAZHd4Ajn9Fo6IDN2kPb0gpkOmzElikooKj41Pw'
+            serverURL: CLOUDSTACK.API,
+            apiKey: CLOUDSTACK.API_KEY,
+            secretKey: CLOUDSTACK.SECRET_KEY
         });
 
         var thisAllocationId = (require('mongoose')).Types.ObjectId().toString();
