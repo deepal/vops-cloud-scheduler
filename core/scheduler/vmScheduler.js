@@ -5,6 +5,13 @@ module.exports = function(zSession){
     var response = require('../../config/responseMessages');
 
 
+    var cloudstack = new (require('csclient'))({
+        serverURL: CLOUDSTACK.API,
+        apiKey: CLOUDSTACK.API_KEY,
+        secretKey: CLOUDSTACK.SECRET_KEY
+    });
+
+
     //TODO: Pending test
     var requestForAllocation = function(jsonAllocRequest, callback){
 
@@ -73,7 +80,7 @@ module.exports = function(zSession){
     };
 
     var createServiceOffering = function (authorizedRequest, callback) {
-        //TODO: create a service offering for VM here
+        var requestingMemory = authorizedRequest.requestContent.group[0].min_memory[0].size[0];
     };
 
     var createDiskOffering = function (authorizedRequest, callback) {

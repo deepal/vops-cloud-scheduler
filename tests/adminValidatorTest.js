@@ -1,4 +1,4 @@
-describe('Admin validator test suite', function () {
+describe.skip('Admin validator test suite', function () {
 
     var db = require('../core/db');
     var UserSession = require('../core/db/schemas/dbSession');

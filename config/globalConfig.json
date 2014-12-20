@@ -1,6 +1,6 @@
 {
   "hostFilter": {
-    "alpha": 0.1,
+    "alpha": 0.5,
     "ewma_last": 0,
     "max_cpu_load_factor": 0.75
   },

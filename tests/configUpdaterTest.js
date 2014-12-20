@@ -1,7 +1,7 @@
 var should = require('should');
 var configUpdater = require('../core/admin/configUpdater')();
 
-describe('Config updater test', function () {
+describe.skip('Config updater test', function () {
 
     var authService = require('../core/auth/authService')();
 

@@ -2,7 +2,7 @@ var hostFilter = new (require('../core/scheduler/hostFilter'))(null);
 require("../config")
 var should = require('should');
 
-describe("Host filter test suite", function(){
+describe.skip("Host filter test suite", function(){
 
     it("hostFilter fetchHostItemInfo() function should return host info object", function(done){
         var zlogin = new (require('../zabbix/login'))(1);
