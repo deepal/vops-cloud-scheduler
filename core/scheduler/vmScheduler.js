@@ -1,8 +1,9 @@
-module.exports = function(zSession){
+module.exports = function (zSession) {
     var authService = require('../auth/authService')();
     var db = require('../db');
     var Allocation = require('../db/schemas/dbAllocation');
     var response = require('../../config/responseMessages');
+    var unitConverter = require('../../core/util/unitConverter')();
 
 
     var cloudstack = new (require('csclient'))({
@@ -13,22 +14,22 @@ module.exports = function(zSession){
 
 
     //TODO: Pending test
-    var requestForAllocation = function(jsonAllocRequest, callback){
+    var requestForAllocation = function (jsonAllocRequest, callback) {
 
-        authService.authorizeResourceRequest(jsonAllocRequest, function(err, authorizedRequest){
-            if(err){
+        authService.authorizeResourceRequest(jsonAllocRequest, function (err, authorizedRequest) {
+            if (err) {
                 callback(err);
             }
-            else{
+            else {
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
-                hostFilter.fetchCloudInfo(zSession, function(err, filteredHostsInfo, allPossibleHosts){
+                hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) {
 
-                    if(filteredHostsInfo.length == 0){
+                    if (filteredHostsInfo.length == 0) {
                         var priorityScheduler = new (require('./priorityScheduler'))();
                         /// do whatever you do with priority scheduler
-                        priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function(err, selectedHost){
+                        priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
                             // results returned from migration scheduler or preemptive scheduler
-                            if(!err){
+                            if (!err) {
 
                                 //TODO: remove this
                                 callback(null, selectedHost);
@@ -42,13 +43,13 @@ module.exports = function(zSession){
                                 //    }
                                 //});
                             }
-                            else{
+                            else {
                                 callback(err);
                             }
                         });
                     }
-                    else{
-                        console.log("Selected Host: "+ JSON.stringify(filteredHostsInfo[0]));
+                    else {
+                        console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
                         //findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
                         //    if(err){
                         //        callback(err);
@@ -59,10 +60,10 @@ module.exports = function(zSession){
                         //});
 
                         allocateRequest(filteredHostsInfo[0], authorizedRequest, function (err, result) {
-                            if(err){
+                            if (err) {
                                 callback(err);
                             }
-                            else{
+                            else {
                                 callback(null, result);
                             }
                         });
@@ -79,12 +80,41 @@ module.exports = function(zSession){
         //de-allocate resources using cloudstack api and execute callback.
     };
 
+    //TODO: Pending test
     var createServiceOffering = function (authorizedRequest, callback) {
-        var requestingMemory = authorizedRequest.requestContent.group[0].min_memory[0].size[0];
+        var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
+        var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
+        var requestingFreq = unitConverter.convertFrequency(parseInt(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]), authorizedRequest.requestContent.group[0].cpu[0].unit[0], 'hz');
+
+        var offeringName = 'ComputeOffering-' + authorizedRequest.session.userID + Date.now();
+
+        cloudstack.execute('createServiceOffering', {
+            displaytext: offeringName,
+            name: offeringName,
+            cpunumber: requestingCores,
+            cpuspeed: requestingFreq,
+            memory: requestingMemory,
+            storagetype: 'shared'
+        }, function (err, res) {
+            callback(err, res);
+        });
     };
 
+    //TODO: Pending test
     var createDiskOffering = function (authorizedRequest, callback) {
-        //TODO: create a disk offering for VM here
+
+        var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'b');
+        var diskOfferingName = 'DiskOffering-' + authorizedRequest.session.userID + Date.now();
+
+        cloudstack.execute('createDiskOffering', {
+            displaytext: diskOfferingName,
+            name: diskOfferingName,
+            disksize: requestingStorage,
+            storagetype: 'shared'
+        }, function (err, res) {
+            callback(err, res);
+        });
+
     };
 
     var registerVMTemplate = function (authorizedRequest, callback) {
@@ -107,36 +137,36 @@ module.exports = function(zSession){
 
         var DBHosts = require('../db/schemas/dbHost');
 
-        DBHosts.findOne({ zabbixID: selectedHost.hostId }).exec(function (err, sHost) {
-            if(err){
+        DBHosts.findOne({zabbixID: selectedHost.hostId}).exec(function (err, sHost) {
+            if (err) {
                 callback(response.error(500, 'Database Error!', err));
             }
-            else{
-                cloudstack.execute('createInstanceGroup', { name: thisAllocationId }, function(err, result){
-                    if(err){
+            else {
+                cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
+                    if (err) {
                         callback(response.error(500, 'Cloudstack error!', err));
                     }
-                    else{
+                    else {
                         createServiceOffering(authorizedRequest, function (err, result) {
-                            if(err){
+                            if (err) {
                                 callback(err);
                             }
-                            else{
+                            else {
                                 createDiskOffering(authorizedRequest, function (err, result) {
-                                    if(err){
+                                    if (err) {
                                         callback(err);
                                     }
-                                    else{
+                                    else {
                                         registerVMTemplate(authorizedRequest, function (err, result) {
-                                            if(err){
+                                            if (err) {
                                                 callback(err);
                                             }
-                                            else{
+                                            else {
                                                 deployVM(sHost, authorizedRequest, function (err, result) {
-                                                    if(err){
+                                                    if (err) {
                                                         callback(err);
                                                     }
-                                                    else{
+                                                    else {
                                                         // Now, VM allocation is complete. It's time to add this allocation info to database
                                                         var allocation = new Allocation({
                                                             _id: thisAllocationId,
@@ -151,10 +181,10 @@ module.exports = function(zSession){
                                                         });
 
                                                         allocation.save(function (err) {
-                                                            if(err){
+                                                            if (err) {
                                                                 response.error(500, 'Database Error!', err);
                                                             }
-                                                            else{
+                                                            else {
                                                                 callback(response.success(200, 'Resource allocation successful!', result));
                                                             }
                                                         });
@@ -172,20 +202,20 @@ module.exports = function(zSession){
         });
     };
 
-    var findBestHost = function(filteredHostsInfo, authorizedRequest, callback){
+    var findBestHost = function (filteredHostsInfo, authorizedRequest, callback) {
 
-        var getValueByKey = function(hostInfo, key){
-            for(var i in hostInfo.items){
-                if(hostInfo.items[i].itemKey == key){
+        var getValueByKey = function (hostInfo, key) {
+            for (var i in hostInfo.items) {
+                if (hostInfo.items[i].itemKey == key) {
                     return hostInfo.items[i].value;
                 }
             }
             return false;
         };
 
-        var getHostByZabbixId = function(filteredHosts, hostID){
-            for(var i in filteredHosts){
-                if(filteredHosts[i].hostId == hostID){
+        var getHostByZabbixId = function (filteredHosts, hostID) {
+            for (var i in filteredHosts) {
+                if (filteredHosts[i].hostId == hostID) {
                     return filteredHosts[i];
                 }
             }
@@ -196,22 +226,22 @@ module.exports = function(zSession){
             //TODO: take zabbix ID as a parameter and get the host from the database and return through callback
         };
 
-        if(filteredHostsInfo.length == 1){
+        if (filteredHostsInfo.length == 1) {
             //TODO: call getDBHostByZabbixId() here
             callback(null, filteredHostsInfo[0]);
         }
-        else{
+        else {
             var bestHostZabbixID = null;
             var minMemoryHostInfo = filteredHostsInfo[0];
             var minCoresHostInfo = filteredHostsInfo[0];
             var minCPUFreqHostInfo = filteredHostsInfo[0];
             var minCPUUtilHostInfo = filteredHostsInfo[0].hostId;
 
-            for(var i in filteredHostsInfo){
-                if(getValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo), 'vm.memory.size[available]')){
+            for (var i in filteredHostsInfo) {
+                if (getValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo), 'vm.memory.size[available]')) {
                     minMemoryHostInfo = filteredHostsInfo[i];
                 }
-                if(getValueByKey(filteredHostsInfo[i], 'system.cpu.num') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minCoresHostInfo), 'system.cpu.num')){
+                if (getValueByKey(filteredHostsInfo[i], 'system.cpu.num') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minCoresHostInfo), 'system.cpu.num')) {
                     minCoresHostInfo = filteredHostsInfo[i];
                 }
                 //TODO: need to do this for frequency as well
@@ -221,7 +251,7 @@ module.exports = function(zSession){
 
             var requestingMemory = parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]);
 
-            switch ((authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase()){
+            switch ((authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase()) {
                 case 'b':
                     break;
                 case 'kb':
@@ -243,7 +273,7 @@ module.exports = function(zSession){
             var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
             var requestingCPUFreq = parseFloat(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]);
 
-            switch ((authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase()){
+            switch ((authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase()) {
                 case 'hz':
                     break;
                 case 'khz':
@@ -259,14 +289,14 @@ module.exports = function(zSession){
                     callback(response.error(403, "Unsupported unit for cpu frequency in resource request!"));
             }
 
-            console.log("mincoresZabbixId = "+minCoresHostInfo.hostId);
-            console.log("minmemoryZabbixId = "+minMemoryHostInfo.hostId);
+            console.log("mincoresZabbixId = " + minCoresHostInfo.hostId);
+            console.log("minmemoryZabbixId = " + minMemoryHostInfo.hostId);
 
             //TODO: call getDBHostByZabbixId() here
             callback(null, true);
         }
     };
-    
+
     var findBestStorage = function (filteredStorageInfo) {
         //TODO: find best storage
     };

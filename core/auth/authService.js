@@ -99,7 +99,7 @@ module.exports = function(){
                 }
             }
         });
-    }
+    };
 
     var authorizeResourceRequest = function (userRequest, callback) {
         // query dbSessions schema and authorize the request. Return the prioritized request
@@ -133,7 +133,7 @@ module.exports = function(){
                 }
             }
         });
-    }
+    };
 
     return {
         login: login,
@@ -141,4 +141,4 @@ module.exports = function(){
         authorizeResourceRequest: authorizeResourceRequest
     }
 
-}
+};
