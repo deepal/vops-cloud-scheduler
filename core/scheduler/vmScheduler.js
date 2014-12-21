@@ -121,8 +121,64 @@ module.exports = function (zSession) {
         //TODO: register a template for VM here
     };
 
-    var deployVM = function (selectedHost, authorizedRequest, callback) {
-        //TODO: Deploy VM here
+    var deployVM = function (selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, callback) {
+        var hostID = selectedHost.cloudstackID;
+        var templateID = null; //TODO: template ID should be given through authorizedRequest
+
+        //list all available zones, take the first zone's id and deploy vm there (zoneid is required when deploying a VM)
+        cloudstack.execute('listZones', {available: true}, function (err, result) {
+            if(err){
+                callback(response.error(500, "Cloudstack error!", err));
+            }
+            else{
+                var zoneID = result.listzonesresponse.zone[0].id;
+
+                if(vmGroupID){
+                    cloudstack.execute('deployVirtualMachine', {
+                        serviceofferingid: serviceOfferingID,
+                        templateid: templateID,
+                        diskofferingid: diskOfferingID,
+                        zoneid: zoneID,
+                        group: vmGroupID,
+                        hostid: hostID
+                    }, function (err, res) {
+                        if(err){
+                            callback(response.error(500, 'Cloudstack error!', err));
+                        }
+                        else{
+                            callback(res);
+                        }
+                    });
+                }
+                else{
+                    cloudstack.execute('createInstanceGroup', {
+
+                    }, function (err, res) {
+                        if(err){
+                            callback(response.error(500, 'Cloudstack error!', err));
+                        }
+                        else{
+                            cloudstack.execute('deployVirtualMachine', {
+                                serviceofferingid: serviceOfferingID,
+                                templateid: templateID,
+                                diskofferingid: diskOfferingID,
+                                zoneid: zoneID,
+                                group: res.createinstancegroupresponse.instancegroup.id,
+                                hostid: hostID
+                            }, function (err, res) {
+                                if(err){
+                                    callback(response.error(500, 'Cloudstack error!', err));
+                                }
+                                else{
+                                    callback(res);
+                                }
+                            });
+                        }
+                    })
+                }
+            }
+        });
+
     };
 
     //TODO: Pending test
@@ -162,12 +218,12 @@ module.exports = function (zSession) {
                                                 callback(err);
                                             }
                                             else {
-                                                deployVM(sHost, authorizedRequest, function (err, result) {
+                                                deployVM(sHost, authorizedRequest, serviceOfferingID, diskOfferingID, groupID, function (err, result) {
                                                     if (err) {
                                                         callback(err);
                                                     }
                                                     else {
-                                                        // Now, VM allocation is complete. It's time to add this allocation info to database
+
                                                         var allocation = new Allocation({
                                                             _id: thisAllocationId,
                                                             from: Date.now(),
@@ -176,13 +232,21 @@ module.exports = function (zSession) {
                                                             allocationTimestamp: Date.now(),
                                                             allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
                                                             associatedHosts: [sHost],
-                                                            vmGroupID: result.createinstancegroupresponse.instancegroup.id,
+                                                            vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
                                                             allocationRequestContent: authorizedRequest.requestContent
                                                         });
 
                                                         allocation.save(function (err) {
                                                             if (err) {
-                                                                response.error(500, 'Database Error!', err);
+                                                                cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
+                                                                    if(err){
+                                                                        callback(response.error(500, 'Cloudstack Error!', err));
+                                                                    }
+                                                                    else{
+                                                                        //if database error occured, destroy the created virtualmachine and return error
+                                                                        callback(response.error(500, 'Database Error!', err));
+                                                                    }
+                                                                });
                                                             }
                                                             else {
                                                                 callback(response.success(200, 'Resource allocation successful!', result));
@@ -249,51 +313,25 @@ module.exports = function (zSession) {
 
             //TODO: compare these two hosts and select the most suitable considering whether the request is memory-intensive or cpu-intensive
 
-            var requestingMemory = parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]);
-
-            switch ((authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase()) {
-                case 'b':
-                    break;
-                case 'kb':
-                    requestingMemory = requestingMemory * 1024;
-                    break;
-                case 'mb':
-                    requestingMemory = requestingMemory * 1024 * 1024;
-                    break;
-                case 'gb':
-                    requestingMemory = requestingMemory * 1024 * 1024 * 1024;
-                    break;
-                case 'tb':
-                    requestingMemory = requestingMemory * 1024 * 1024 * 1024 * 2014;
-                    break;
-                default :
-                    callback(response.error(403, "Unsupported unit for min_memory in resource request!"));
-            }
-
+            var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), (authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase(), 'b' );
             var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
-            var requestingCPUFreq = parseFloat(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]);
+            var requestingCPUFreq = unitConverter.convertFrequency(parseFloat(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]),(authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase(), 'hz');
 
-            switch ((authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase()) {
-                case 'hz':
-                    break;
-                case 'khz':
-                    requestingCPUFreq = requestingCPUFreq * 1000;
-                    break;
-                case 'mhz':
-                    requestingCPUFreq = requestingCPUFreq * 1000 * 1000;
-                    break;
-                case 'ghz':
-                    requestingCPUFreq = requestingCPUFreq * 1000 * 1000 * 1000;
-                    break;
-                default :
-                    callback(response.error(403, "Unsupported unit for cpu frequency in resource request!"));
+            if(!requestingMemory){
+                callback(response.error(403, "Unsupported unit for min_memory in resource request!"));
             }
+            else{
+                if(!requestingCPUFreq){
+                    callback(response.error(403, "Unsupported unit for cpu frequency in resource request!"));
+                }
+                else{
+                    console.log("mincoresZabbixId = " + minCoresHostInfo.hostId);
+                    console.log("minmemoryZabbixId = " + minMemoryHostInfo.hostId);
 
-            console.log("mincoresZabbixId = " + minCoresHostInfo.hostId);
-            console.log("minmemoryZabbixId = " + minMemoryHostInfo.hostId);
-
-            //TODO: call getDBHostByZabbixId() here
-            callback(null, true);
+                    //TODO: call getDBHostByZabbixId() here
+                    callback(null, true);
+                }
+            }
         }
     };
 
