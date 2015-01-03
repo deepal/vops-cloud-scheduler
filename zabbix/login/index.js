@@ -32,7 +32,7 @@ module.exports = function(requestID){
             loginCallback(resData, rawRes);
         });
 
-    }
+    };
 
     return {
         login: login
