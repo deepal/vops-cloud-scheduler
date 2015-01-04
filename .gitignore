@@ -3,7 +3,6 @@
 VirtualOps.iml
 *.log
 =======
-tests/debug/*
 *.iml
 *.log
 .idea/*
