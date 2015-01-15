@@ -36,6 +36,19 @@ var createServiceOffering = function (displayText, name, cpuCount, cpuSpeed, mem
     });
 };
 
+var createInstanceGroup = function () {
+    cloudstack.execute('createInstanceGroup', {
+        name: (require('mongoose')).Types.ObjectId().toString()
+    }, function (err, result) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log(JSON.stringify(result));
+        }
+    });
+};
+
 var listServiceOfferings = function(id){
 
     cloudstack.execute('listServiceOfferings', {id: id}, function (err, result) {
@@ -135,10 +148,10 @@ var deployVM = function () {
 };
 
 
-
+createInstanceGroup();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
 //listVirtualMachines();
 //listZones();
 
-deployVM();
+//deployVM();
