@@ -81,9 +81,9 @@ module.exports = function (zSession) {
 
     //TODO: Pending test
     var createServiceOffering = function (authorizedRequest, callback) {
-        var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
+        var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'mb');
         var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
-        var requestingFreq = unitConverter.convertFrequency(parseInt(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]), authorizedRequest.requestContent.group[0].cpu[0].unit[0], 'hz');
+        var requestingFreq = unitConverter.convertFrequency(parseInt(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]), authorizedRequest.requestContent.group[0].cpu[0].unit[0], 'mhz');
 
         var offeringName = 'ComputeOffering-' + authorizedRequest.session.userID + Date.now();
 
@@ -102,7 +102,7 @@ module.exports = function (zSession) {
     //TODO: Pending test
     var createDiskOffering = function (authorizedRequest, callback) {
 
-        var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'b');
+        var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'gb');
         var diskOfferingName = 'DiskOffering-' + authorizedRequest.session.userID + Date.now();
 
         cloudstack.execute('createDiskOffering', {
@@ -122,7 +122,7 @@ module.exports = function (zSession) {
 
     var deployVM = function (selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, callback) {
         var hostID = selectedHost.cloudstackID;
-        var templateID = null; //TODO: template ID should be given through authorizedRequest
+        var templateID = authorizedRequest.requestContent.group[0].image[0].id[0]; //TODO: template ID should be given through authorizedRequest
 
         //list all available zones, take the first zone's id and deploy vm there (zoneid is required when deploying a VM)
         cloudstack.execute('listZones', {available: true}, function (err, result) {
@@ -198,6 +198,7 @@ module.exports = function (zSession) {
             }
             else {
                 cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
+                    var vmGroupID = result.createinstancegroupresponse.instancegroup.id;
                     if (err) {
                         callback(response.error(500, 'Cloudstack error!', err));
                     }
@@ -207,50 +208,44 @@ module.exports = function (zSession) {
                                 callback(err);
                             }
                             else {
+                                var serviceOfferingID = result.createserviceofferingresponse.serviceoffering.id;
                                 createDiskOffering(authorizedRequest, function (err, result) {
                                     if (err) {
                                         callback(err);
                                     }
                                     else {
-                                        registerVMTemplate(authorizedRequest, function (err, result) {
+                                        var diskOfferingID = result.creatediskofferingresponse.diskoffering.id;
+                                        deployVM(sHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, function (err, result) {
                                             if (err) {
                                                 callback(err);
                                             }
                                             else {
-                                                deployVM(sHost, authorizedRequest, serviceOfferingID, diskOfferingID, groupID, function (err, result) {
+                                                var allocation = new Allocation({
+                                                    _id: thisAllocationId,
+                                                    from: Date.now(),
+                                                    expires: null,
+                                                    userSession: authorizedRequest.session,
+                                                    allocationTimestamp: Date.now(),
+                                                    allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
+                                                    associatedHosts: [sHost],
+                                                    vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
+                                                    allocationRequestContent: authorizedRequest.requestContent
+                                                });
+
+                                                allocation.save(function (err) {
                                                     if (err) {
-                                                        callback(err);
+                                                        cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
+                                                            if(err){
+                                                                callback(response.error(500, 'Cloudstack Error!', err));
+                                                            }
+                                                            else{
+                                                                //if database error occured, destroy the created virtualmachine and return error
+                                                                callback(response.error(500, 'Database Error!', err));
+                                                            }
+                                                        });
                                                     }
                                                     else {
-
-                                                        var allocation = new Allocation({
-                                                            _id: thisAllocationId,
-                                                            from: Date.now(),
-                                                            expires: null,
-                                                            userSession: authorizedRequest.session,
-                                                            allocationTimestamp: Date.now(),
-                                                            allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
-                                                            associatedHosts: [sHost],
-                                                            vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
-                                                            allocationRequestContent: authorizedRequest.requestContent
-                                                        });
-
-                                                        allocation.save(function (err) {
-                                                            if (err) {
-                                                                cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
-                                                                    if(err){
-                                                                        callback(response.error(500, 'Cloudstack Error!', err));
-                                                                    }
-                                                                    else{
-                                                                        //if database error occured, destroy the created virtualmachine and return error
-                                                                        callback(response.error(500, 'Database Error!', err));
-                                                                    }
-                                                                });
-                                                            }
-                                                            else {
-                                                                callback(response.success(200, 'Resource allocation successful!', result));
-                                                            }
-                                                        });
+                                                        callback(response.success(200, 'Resource allocation successful!', result));
                                                     }
                                                 });
                                             }
