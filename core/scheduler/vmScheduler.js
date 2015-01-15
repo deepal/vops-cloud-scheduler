@@ -12,7 +12,6 @@ module.exports = function (zSession) {
         secretKey: CLOUDSTACK.SECRET_KEY
     });
 
-
     //TODO: Pending test
     var requestForAllocation = function (jsonAllocRequest, callback) {
 

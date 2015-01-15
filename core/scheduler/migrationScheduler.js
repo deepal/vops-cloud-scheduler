@@ -3,6 +3,11 @@ module.exports = function () {
     var db = require('../db');
     var Hosts = require('../db/schemas/dbHost');
     var _ = require('underscore');
+    var cloudstack = new (require('csclient'))({
+        serverURL: CLOUDSTACK.API,
+        apiKey: CLOUDSTACK.API_KEY,
+        secretKey: CLOUDSTACK.SECRET_KEY
+    });
 
     var response = require('../../config/responseMessages');
 
@@ -17,11 +22,11 @@ module.exports = function () {
         }
     };
 
-    var findMinHost = function (hostsInfo) {
+    var findMinHost = function (hostsInfo, authorizedRequest) {
 
         var askingMemory = authorizedRequest.requestContent.group[0].min_memory[0].size[0];
 
-        switch (authorizedRequest.requestContent.group[0].min_memory[0].size[unit].toLowerCase()) {
+        switch (authorizedRequest.requestContent.group[0].min_memory[0].unit[0].toLowerCase()) {
             case 'b':
                 break;
             case 'kb':
@@ -59,18 +64,13 @@ module.exports = function () {
 
     var findHostByMigration = function (authorizedRequest, allPossibleHosts, callback) {
 
-        var candidate = findMinHost(allPossibleHosts);
+        var candidate = findMinHost(allPossibleHosts, authorizedRequest);
 
         Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
             if(err){
                 callback(response.error(500, "Database error!", err));
             }
             else{
-                var cloudstack = new (require('csclient'))({
-                    serverURL: CLOUDSTACK.API,
-                    apiKey: CLOUDSTACK.API_KEY,
-                    secretKey: CLOUDSTACK.SECRET_KEY
-                });
 
                 var vmList = [];
 
@@ -80,15 +80,15 @@ module.exports = function () {
                         callback(response.error(500, 'Cloudstack Error!', err));
                     }
                     else{
-                        var vmListResponse = result.listvirtualmachinesresponse.vm; //TODO: need to check the reponse format
+                        var vmListResponse = result.listvirtualmachinesresponse.virtualmachine; //TODO: need to check the reponse format
 
                         getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
                             Hosts.find({}).exec(function (err, hostArray) {
                                 if(err){
-                                    response.error(500, 'Database Error', err);
+                                    callback(response.error(500, 'Database Error', err));
                                 }
                                 else{
-                                    checkVMMigratability(vmList[i], hostArray, 0, allPossibleHosts, _.clone(allPossibleHosts));
+                                    checkVMMigratability(vmList, hostArray, 0, allPossibleHosts, _.clone(allPossibleHosts));
                                 }
                             });
                         });
@@ -97,7 +97,7 @@ module.exports = function () {
 
                 });
 
-                callback(null, "This is the selected host by migration scheduler");
+                //callback(null, "This is the selected host by migration scheduler");
             }
         });
 
@@ -112,15 +112,17 @@ module.exports = function () {
         else{
             var vmID = vmListResponse[vmIndex].id;
             var vmHostID = vmListResponse[vmIndex].hostid;
+            var serviceOfferingId= vmListResponse[vmIndex].serviceofferingid;
 
-            cloudstack.execute('listServiceOfferings', {id: vmID}, function (err, result) {
+            cloudstack.execute('listServiceOfferings', {id: serviceOfferingId}, function (err, result) {
                 if (err) {
                     callback(response.error(500, 'Cloudstack Error!', err));
                 }
                 else {
                     var serviceOffering = result.listserviceofferingsresponse.serviceoffering[0];
 
-                    vmList[vmIndex][vmID] = {
+                    vmList[vmIndex] = {
+                        vmID: vmID,
                         hostID: vmHostID,
                         detailedInfo: vmListResponse[vmIndex],
                         numOfCores: serviceOffering.cpunumber,
@@ -138,8 +140,8 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vm, hostInfo, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
-        
+    var checkVMMigratability = function (vmList, hostInfo, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
+        console.log(JSON.stringify(vmList));
     };
 
     return {
