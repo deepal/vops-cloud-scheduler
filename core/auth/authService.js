@@ -4,8 +4,10 @@ module.exports = function(){
     var db = require('../db');
     var User = require('../db/schemas/dbUser');
     var UserSession = require('../db/schemas/dbSession');
-    var md5 = require('MD5');
+    //var md5 = require('MD5');
     var response = require('../../config/responseMessages');
+    var crypto = require('crypto');
+    var shasum = crypto.createHash('sha1');
 
     var login = function (username, password, callback) {
 
@@ -16,10 +18,12 @@ module.exports = function(){
             }
             else{
                 if(userObj){
-                    var hPassword = md5(password + userObj._id.getTimestamp());
+                    shasum.update(password + userObj._id.getTimestamp());
+                    var hPassword = shasum.digest('hex');
                     if(userObj.password == hPassword){
                         //userObj.loginTime = Date.now();         //include login time in the user object to create a unique session key
-                        var sessionKey = md5(JSON.stringify(userObj)+Date.now());  //create unique session key from stringified user object
+                        shasum.update(JSON.stringify(userObj)+Date.now());
+                        var sessionKey = shasum.digest('hex');  //create unique session key from stringified user object
 
                         //var Session = require('../db/schemas/dbSession');
                         var newSession = new UserSession({
@@ -76,10 +80,11 @@ module.exports = function(){
                 }
                 else{
                     var objID = (require('mongoose')).Types.ObjectId();
+                    shasum.update(userObj.password + objID.getTimestamp());
                     var newUser = new User({
                         _id: objID,
                         username: userObj.username,
-                        password: md5(userObj.password + objID.getTimestamp()),
+                        password: shasum.digest('hex'),
                         userInfo: userObj.userInfo,
                         priority: userObj.priority,
                         admin: userObj.admin
