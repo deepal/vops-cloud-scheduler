@@ -18,12 +18,10 @@ module.exports = function(){
             }
             else{
                 if(userObj){
-                    shasum.update(password + userObj._id.getTimestamp());
-                    var hPassword = shasum.digest('hex');
+                    var hPassword = getShaHash(password + userObj._id.getTimestamp());
                     if(userObj.password == hPassword){
                         //userObj.loginTime = Date.now();         //include login time in the user object to create a unique session key
-                        shasum.update(JSON.stringify(userObj)+Date.now());
-                        var sessionKey = shasum.digest('hex');  //create unique session key from stringified user object
+                        var sessionKey = getShaHash(JSON.stringify(userObj)+Date.now());  //create unique session key from stringified user object
 
                         //var Session = require('../db/schemas/dbSession');
                         var newSession = new UserSession({
@@ -49,7 +47,7 @@ module.exports = function(){
                     }
                 }
                 else{
-                    callback(response.error(200, "No such user exists!"));
+                    callback(response.error(200, "Username or Password Invalid!"));
                 }
             }
         });
@@ -80,11 +78,10 @@ module.exports = function(){
                 }
                 else{
                     var objID = (require('mongoose')).Types.ObjectId();
-                    shasum.update(userObj.password + objID.getTimestamp());
                     var newUser = new User({
                         _id: objID,
                         username: userObj.username,
-                        password: shasum.digest('hex'),
+                        password: getShaHash(userObj.password + objID.getTimestamp()),
                         userInfo: userObj.userInfo,
                         priority: userObj.priority,
                         admin: userObj.admin
@@ -138,6 +135,10 @@ module.exports = function(){
                 }
             }
         });
+    };
+
+    var getShaHash = function (str) {
+        return crypto.createHash('sha256').update(str).digest('hex')
     };
 
     return {
