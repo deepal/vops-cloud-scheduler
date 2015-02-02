@@ -49,21 +49,19 @@ module.exports = function (zSession) {
                     }
                     else {
                         console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
-                        //findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
-                        //    if(err){
-                        //        callback(err);
-                        //    }
-                        //    else{
-                        //        console.log(bestHost);
-                        //    }
-                        //});
-
-                        allocateRequest(filteredHostsInfo[0], authorizedRequest, function (err, result) {
-                            if (err) {
+                        findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
+                            if(err){
                                 callback(err);
                             }
-                            else {
-                                callback(null, result);
+                            else{
+                                allocateRequest(bestHost, authorizedRequest, function (err, result) {
+                                    if (err) {
+                                        callback(err);
+                                    }
+                                    else {
+                                        callback(null, result);
+                                    }
+                                });
                             }
                         });
                     }
@@ -192,62 +190,55 @@ module.exports = function (zSession) {
 
         var DBHosts = require('../db/schemas/dbHost');
 
-        DBHosts.findOne({zabbixID: selectedHost.hostId}).exec(function (err, sHost) {
+        cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
+            var vmGroupID = result.createinstancegroupresponse.instancegroup.id;
             if (err) {
-                callback(response.error(500, 'Database Error!', err));
+                callback(response.error(500, 'Cloudstack error!', err));
             }
             else {
-                cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
-                    var vmGroupID = result.createinstancegroupresponse.instancegroup.id;
+                createServiceOffering(authorizedRequest, function (err, result) {
                     if (err) {
-                        callback(response.error(500, 'Cloudstack error!', err));
+                        callback(err);
                     }
                     else {
-                        createServiceOffering(authorizedRequest, function (err, result) {
+                        var serviceOfferingID = result.createserviceofferingresponse.serviceoffering.id;
+                        createDiskOffering(authorizedRequest, function (err, result) {
                             if (err) {
                                 callback(err);
                             }
                             else {
-                                var serviceOfferingID = result.createserviceofferingresponse.serviceoffering.id;
-                                createDiskOffering(authorizedRequest, function (err, result) {
+                                var diskOfferingID = result.creatediskofferingresponse.diskoffering.id;
+                                deployVM(selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, function (err, result) {
                                     if (err) {
                                         callback(err);
                                     }
                                     else {
-                                        var diskOfferingID = result.creatediskofferingresponse.diskoffering.id;
-                                        deployVM(sHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, function (err, result) {
+                                        var allocation = new Allocation({
+                                            _id: thisAllocationId,
+                                            from: Date.now(),
+                                            expires: null,
+                                            userSession: authorizedRequest.session,
+                                            allocationTimestamp: Date.now(),
+                                            allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
+                                            associatedHosts: [selectedHost],
+                                            vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
+                                            allocationRequestContent: authorizedRequest.requestContent
+                                        });
+
+                                        allocation.save(function (err) {
                                             if (err) {
-                                                callback(err);
+                                                cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
+                                                    if(err){
+                                                        callback(response.error(500, 'Cloudstack Error!', err));
+                                                    }
+                                                    else{
+                                                        //if database error occured, destroy the created virtualmachine and return error
+                                                        callback(response.error(500, 'Database Error!', err));
+                                                    }
+                                                });
                                             }
                                             else {
-                                                var allocation = new Allocation({
-                                                    _id: thisAllocationId,
-                                                    from: Date.now(),
-                                                    expires: null,
-                                                    userSession: authorizedRequest.session,
-                                                    allocationTimestamp: Date.now(),
-                                                    allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
-                                                    associatedHosts: [sHost],
-                                                    vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
-                                                    allocationRequestContent: authorizedRequest.requestContent
-                                                });
-
-                                                allocation.save(function (err) {
-                                                    if (err) {
-                                                        cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
-                                                            if(err){
-                                                                callback(response.error(500, 'Cloudstack Error!', err));
-                                                            }
-                                                            else{
-                                                                //if database error occured, destroy the created virtualmachine and return error
-                                                                callback(response.error(500, 'Database Error!', err));
-                                                            }
-                                                        });
-                                                    }
-                                                    else {
-                                                        callback(response.success(200, 'Resource allocation successful!', result));
-                                                    }
-                                                });
+                                                callback(response.success(200, 'Resource allocation successful!', result));
                                             }
                                         });
                                     }
@@ -262,71 +253,46 @@ module.exports = function (zSession) {
 
     var findBestHost = function (filteredHostsInfo, authorizedRequest, callback) {
 
-        var getValueByKey = function (hostInfo, key) {
-            for (var i in hostInfo.items) {
-                if (hostInfo.items[i].itemKey == key) {
-                    return hostInfo.items[i].value;
-                }
-            }
-            return false;
-        };
-
-        var getHostByZabbixId = function (filteredHosts, hostID) {
-            for (var i in filteredHosts) {
-                if (filteredHosts[i].hostId == hostID) {
-                    return filteredHosts[i];
-                }
-            }
-            return false;
-        };
-
-        var getDBHostByZabbixId = function (zabbixId, callback) {
-            //TODO: take zabbix ID as a parameter and get the host from the database and return through callback
-        };
+        var utilFunctions = require('../util/utilFunctions')();
+        var getDBHostByZabbixId = utilFunctions.getDBHostByZabbixId;
+        var getHostByZabbixId  = utilFunctions.getHostByZabbixId;
+        var getItemValueByKey= utilFunctions.getItemValueByKey;
 
         if (filteredHostsInfo.length == 1) {
             //TODO: call getDBHostByZabbixId() here
+
+            getDBHostByZabbixId(filteredHostsInfo[0].hostid, function (err, dbHost) {
+                if(err){
+                    callback(response.error(500, "Database Error !", err));
+                }
+                else{
+                    callback(null, dbHost);
+                }
+            });
+
             callback(null, filteredHostsInfo[0]);
         }
         else {
-            var bestHostZabbixID = null;
             var minMemoryHostInfo = filteredHostsInfo[0];
-            var minCoresHostInfo = filteredHostsInfo[0];
-            var minCPUFreqHostInfo = filteredHostsInfo[0];
-            var minCPUUtilHostInfo = filteredHostsInfo[0].hostId;
 
             for (var i in filteredHostsInfo) {
-                if (getValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo), 'vm.memory.size[available]')) {
+                if (getItemValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getItemValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo.hostId), 'vm.memory.size[available]')) {
                     minMemoryHostInfo = filteredHostsInfo[i];
                 }
-                if (getValueByKey(filteredHostsInfo[i], 'system.cpu.num') < getValueByKey(getHostByZabbixId(filteredHostsInfo, minCoresHostInfo), 'system.cpu.num')) {
-                    minCoresHostInfo = filteredHostsInfo[i];
-                }
-                //TODO: need to do this for frequency as well
             }
 
-            //TODO: compare these two hosts and select the most suitable considering whether the request is memory-intensive or cpu-intensive
-
-            var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), (authorizedRequest.requestContent.group[0].min_memory[0].unit[0]).toLowerCase(), 'b' );
-            var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
-            var requestingCPUFreq = unitConverter.convertFrequency(parseFloat(authorizedRequest.requestContent.group[0].cpu[0].frequency[0]),(authorizedRequest.requestContent.group[0].cpu[0].unit[0]).toLowerCase(), 'hz');
-
-            if(!requestingMemory){
-                callback(response.error(403, "Unsupported unit for min_memory in resource request!"));
-            }
-            else{
-                if(!requestingCPUFreq){
-                    callback(response.error(403, "Unsupported unit for cpu frequency in resource request!"));
+            getDBHostByZabbixId(minMemoryHostInfo.hostId, function (err, dbHost) {
+                if(err){
+                    callback(response.error(500, "Database Error !", err));
                 }
                 else{
-                    console.log("mincoresZabbixId = " + minCoresHostInfo.hostId);
-                    console.log("minmemoryZabbixId = " + minMemoryHostInfo.hostId);
-
-                    //TODO: call getDBHostByZabbixId() here
-                    callback(null, true);
+                    callback(null, dbHost);
                 }
-            }
+            });
+
         }
+
+
     };
 
     var findBestStorage = function (filteredStorageInfo) {

@@ -148,7 +148,19 @@ var deployVM = function () {
 };
 
 
-createInstanceGroup();
+var listHosts = function () {
+    cloudstack.execute('listHosts', {}, function (err, result) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log(JSON.stringify(result));
+        }
+    });
+};
+
+
+listHosts();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
 //listVirtualMachines();

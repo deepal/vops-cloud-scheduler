@@ -1,7 +1,7 @@
 var should = require('should');
-require('../config')
+require('../config');
 var zb = require('../zabbix/login');
-;
+
 var zlogin = new zb(2);
 
 
@@ -20,7 +20,7 @@ describe.skip('Zabbix Module Test suite', function(){
     it("zabbix api method call should return data", function(done){
         zlogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, function(data, res){
             var sessID = data.result;
-            var zapi = require('../zabbix/api')
+            var zapi = require('../zabbix/api');
             var client = new zapi(sessID);
 
             client.exec(ZABBIX.METHODS.history, {limit: 2}, function(resData, rawRes){
