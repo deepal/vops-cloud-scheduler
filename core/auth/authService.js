@@ -105,36 +105,43 @@ module.exports = function(){
 
     var authorizeResourceRequest = function (userRequest, callback) {
         // query dbSessions schema and authorize the request. Return the prioritized request
-        var sessionKey = userRequest.session_id[0];
-
-        if(!sessionKey){
-            callback({
-                status: 'Error',
-                code: 403,
-                message: 'Unauthorized request'
-            });
-        }
-
-        UserSession.findOne({ sessionID: sessionKey }).exec(function (err, sessionObj) {
-            if(err){
+        if(userRequest.session_id){
+            var sessionKey = userRequest.session_id[0];
+            if(!sessionKey){
                 callback({
                     status: 'Error',
-                    code: 500,
-                    error: err
+                    code: 403,
+                    message: 'Unauthorized request'
                 });
             }
             else{
-                if(sessionObj){
-                    callback(null, {
-                        session: sessionObj,
-                        requestContent: userRequest
-                    });
-                }
-                else{
-                    callback(response.error(403, "Please login to Smart Cloud Scheduler!", err));
-                }
+                UserSession.findOne({ sessionID: sessionKey }).exec(function (err, sessionObj) {
+                    if(err){
+                        callback({
+                            status: 'Error',
+                            code: 500,
+                            error: err
+                        });
+                    }
+                    else{
+                        if(sessionObj){
+                            callback(null, {
+                                session: sessionObj,
+                                requestContent: userRequest
+                            });
+                        }
+                        else{
+                            callback(response.error(403, "Please login to Smart Cloud Scheduler!", err));
+                        }
+                    }
+                });
             }
-        });
+        }
+        else{
+            callback(response.error(403, "Please specify your session key in the request!"));
+        }
+
+
     };
 
     var getShaHash = function (str) {

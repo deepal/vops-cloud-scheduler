@@ -2,6 +2,7 @@ module.exports = function (zSession) {
     var authService = require('../auth/authService')();
     var db = require('../db');
     var Allocation = require('../db/schemas/dbAllocation');
+    var DBHost = require('../db/schemas/dbHost');
     var response = require('../../config/responseMessages');
     var unitConverter = require('../../core/util/unitConverter')();
 
@@ -20,6 +21,7 @@ module.exports = function (zSession) {
                 callback(err);
             }
             else {
+                console.log(JSON.stringify(authorizedRequest));
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
                 hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) {
 
@@ -68,7 +70,6 @@ module.exports = function (zSession) {
                 });
             }
         });
-
     };
 
 
@@ -100,17 +101,32 @@ module.exports = function (zSession) {
     //TODO: Pending test
     var createDiskOffering = function (authorizedRequest, callback) {
 
-        var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'gb');
-        var diskOfferingName = 'DiskOffering-' + authorizedRequest.session.userID + Date.now();
+        var type = authorizedRequest.requestContent.group[0].image[0].type[0];
 
-        cloudstack.execute('createDiskOffering', {
-            displaytext: diskOfferingName,
-            name: diskOfferingName,
-            disksize: requestingStorage,
-            storagetype: 'shared'
-        }, function (err, res) {
-            callback(err, res);
-        });
+        if(type == 'iso'){
+            var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'gb');
+            var diskOfferingName = 'DiskOffering-' + authorizedRequest.session.userID + Date.now();
+
+            cloudstack.execute('createDiskOffering', {
+                displaytext: diskOfferingName,
+                name: diskOfferingName,
+                disksize: requestingStorage,
+                storagetype: 'shared'
+            }, function (err, res) {
+                if(err){
+                    callback(response.error(500, "Cloudstack Error!", err));
+                }
+                else{
+                    callback(null, res);
+                }
+            });
+        }
+        else if(type == 'template'){
+            callback(null);
+        }
+        else{
+            callback(response.error(200, "Unsupported image format!", null));
+        }
 
     };
 
@@ -251,6 +267,7 @@ module.exports = function (zSession) {
         });
     };
 
+
     var findBestHost = function (filteredHostsInfo, authorizedRequest, callback) {
 
         var utilFunctions = require('../util/utilFunctions')();
@@ -273,22 +290,38 @@ module.exports = function (zSession) {
             callback(null, filteredHostsInfo[0]);
         }
         else {
-            var minMemoryHostInfo = filteredHostsInfo[0];
 
-            for (var i in filteredHostsInfo) {
-                if (getItemValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getItemValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo.hostId), 'vm.memory.size[available]')) {
-                    minMemoryHostInfo = filteredHostsInfo[i];
+            DBHost.find({}).exec(function (err, res) {
+                var availableHostList = [];
+                for(var i in res){
+                    availableHostList.push(""+ res[i].zabbixID);
                 }
-            }
 
-            getDBHostByZabbixId(minMemoryHostInfo.hostId, function (err, dbHost) {
-                if(err){
-                    callback(response.error(500, "Database Error !", err));
+                var minMemoryHostInfo = filteredHostsInfo[0];
+                var filteredIndex = 0;
+                while((availableHostList.indexOf(filteredHostsInfo[filteredIndex].hostId) == -1))    {
+                    minMemoryHostInfo = filteredHostsInfo[++filteredIndex];
                 }
-                else{
-                    callback(null, dbHost);
+
+                for (var i in filteredHostsInfo) {
+                    if ((getItemValueByKey(filteredHostsInfo[i], 'vm.memory.size[available]') < getItemValueByKey(getHostByZabbixId(filteredHostsInfo, minMemoryHostInfo.hostId), 'vm.memory.size[available]')) && (availableHostList.indexOf(filteredHostsInfo[i].hostId) > -1)) {
+                        minMemoryHostInfo = filteredHostsInfo[i];
+                    }
                 }
+
+
+                getDBHostByZabbixId(minMemoryHostInfo.hostId, function (err, dbHost) {
+                    if(err){
+                        callback(response.error(500, "Database Error !", err));
+                    }
+                    else{
+                        callback(null, dbHost);
+                    }
+                });
+
             });
+
+
 
         }
 

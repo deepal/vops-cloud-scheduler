@@ -129,13 +129,13 @@ var deployVM = function () {
 
     cloudstack.execute('deployVirtualMachine', {
         response: 'json',
-        serviceofferingid: "edb7dc1e-aba6-4e50-895e-828d34546629",
-        templateid:        "df6b9d45-92d0-11e4-aeda-94de80298dcc",
-        zoneid:            "b466a214-880d-4a4a-88b1-1c03fe2a36c7",
-        diskofferingid:    "39382d71-d617-4601-86a7-58c45c5fea50",
+        serviceofferingid: "8cf0a8a1-418b-4654-8ac3-778c7314e546",
+        templateid:        "280b40d0-6644-4e47-ac7c-074e2fa40cd4",
+        zoneid:            "c7b79e90-9478-45b9-800f-8fc69033c5ee",
+        diskofferingid:    "180b32b2-a5e7-48f9-880e-a0c920d2c3f1",
         hypervisor: "KVM",
-        displayname: "centos",
-        name: "centos"
+        displayname: "slitz",
+        name: "slitz"
     }, function (err, result) {
         if(err){
             console.log(err);
@@ -160,10 +160,9 @@ var listHosts = function () {
 };
 
 
-listHosts();
+//listHosts();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
 //listVirtualMachines();
 //listZones();
-
-//deployVM();
+deployVM();
