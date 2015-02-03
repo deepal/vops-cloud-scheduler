@@ -141,7 +141,22 @@ module.exports = function () {
 
     //TODO: Needs testing
     var checkVMMigratability = function (vmList, hostInfo, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
-        console.log(JSON.stringify(vmList));
+        //Setting up vmList array in to decreasing order of memory
+       vmList.sort(compareDescending());
+        console.log(vmList);
+    };
+
+    var compareDescending =function (attribute1, attribute2) {
+        if(attribute1>attribute2){
+            return -1;
+        }
+        else if(attribute1<attribute2){
+            return 1;
+        }
+        else if(attribute1 == attribute2){
+            return 0;
+        }
+
     };
 
     return {
