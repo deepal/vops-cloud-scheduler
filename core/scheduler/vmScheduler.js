@@ -50,7 +50,7 @@ module.exports = function (zSession) {
                         });
                     }
                     else {
-                        console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
+                        //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
                         findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
                             if(err){
                                 callback(err);
@@ -153,20 +153,20 @@ module.exports = function (zSession) {
                         diskofferingid: diskOfferingID,
                         zoneid: zoneID,
                         group: vmGroupID,
-                        hostid: hostID
+                        hostid: hostID,
+                        hypervisor: HYPERVISOR
                     }, function (err, res) {
                         if(err){
                             callback(response.error(500, 'Cloudstack error!', err));
                         }
                         else{
-                            callback(res);
+                            console.log("VM is being deployed !");
+                            callback(null, res);
                         }
                     });
                 }
                 else{
-                    cloudstack.execute('createInstanceGroup', {
-
-                    }, function (err, res) {
+                    cloudstack.execute('createInstanceGroup', {}, function (err, res) {
                         if(err){
                             callback(response.error(500, 'Cloudstack error!', err));
                         }
@@ -183,11 +183,11 @@ module.exports = function (zSession) {
                                     callback(response.error(500, 'Cloudstack error!', err));
                                 }
                                 else{
-                                    callback(res);
+                                    callback(null, res);
                                 }
                             });
                         }
-                    })
+                    });
                 }
             }
         });
@@ -254,7 +254,7 @@ module.exports = function (zSession) {
                                                 });
                                             }
                                             else {
-                                                callback(response.success(200, 'Resource allocation successful!', result));
+                                                callback(null, response.success(200, 'Resource allocation successful!', result));
                                             }
                                         });
                                     }

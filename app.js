@@ -38,22 +38,21 @@ var zabbixLoginCallback = function(data, res) {
         routes.submitAPIRequest(req, res, sessID);
     });
 
-    app.get('/configuration', routes.configRead);
+    app.get('/configuration', routes.configRead); //TODO: Implement routes.configRead
 
-    app.post('/configuration', routes.configWrite);
+    app.post('/configuration', routes.configWrite); //TODO: Implement routes.configWrite
 
     app.post('/debug/storage', routes.storageDebug);
 
-    console.log("Resource scheduler is waiting for requests...");
-
     if(sessID){
-        app.listen(3000);
+        app.listen(LISTEN_PORT);
+        console.log("Resource scheduler is listening on port "+LISTEN_PORT+"...");
     }
     else{
         console.log("Zabbix Server login error! Check Zabbix connection and credentials.");
     }
 
-}
+};
 
 zabbixLogin.login(ZABBIX.USERNAME, ZABBIX.PASSWORD, zabbixLoginCallback);
 

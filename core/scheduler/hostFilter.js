@@ -373,7 +373,7 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-            console.log("memoryCandidateHosts:"+JSON.stringify(candidateHosts));
+            //console.log("memoryCandidateHosts:"+JSON.stringify(candidateHosts));
 
             //Filtering Hosts with sufficient cores from those who already fulfill memory requirements
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -462,8 +462,8 @@ module.exports = function (resourceRequest) {
                 }
             }
 
-            console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
-            console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
+            //console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
+            //console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
             callback(null, candidateHosts, possibleMemoryHosts);
         });
     };

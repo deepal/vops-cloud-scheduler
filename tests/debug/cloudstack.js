@@ -129,11 +129,11 @@ var deployVM = function () {
 
     cloudstack.execute('deployVirtualMachine', {
         response: 'json',
-        serviceofferingid: "8cf0a8a1-418b-4654-8ac3-778c7314e546",
-        templateid:        "280b40d0-6644-4e47-ac7c-074e2fa40cd4",
-        zoneid:            "c7b79e90-9478-45b9-800f-8fc69033c5ee",
-        diskofferingid:    "180b32b2-a5e7-48f9-880e-a0c920d2c3f1",
-        hypervisor: "KVM",
+        serviceofferingid: "4b022f62-66a5-41c7-9cf2-f34c797e9949",
+        templateid:        "cd9ec1b6-19d2-40a9-9dda-ccde05e79f5a",
+        zoneid:            "ece275c0-5581-4192-a6b5-7c2fe477ed4b",
+        diskofferingid:    "0691c1a6-8184-4ba3-b527-bd28ea35bccc",
+        hypervisor: "kvm",
         displayname: "slitz",
         name: "slitz"
     }, function (err, result) {

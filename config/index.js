@@ -1,11 +1,14 @@
 
+//Resource Scheduler Configuration
+LISTEN_PORT = 3000;
+HYPERVISOR = 'kvm'
 
 //Cloudstack configuration
 
 CLOUDSTACK = {};
 CLOUDSTACK.API = "http://10.8.100.201:8080/client/api?";
-CLOUDSTACK.API_KEY = "wf6wkx8prnzsk45vBMY7zANiA0qcoHZkb1gyLsCLlSJFwqayPYYh4OoiGOuczZhHk5sVLQC-co1wFKZIyr39eg";
-CLOUDSTACK.SECRET_KEY = "k2_Z97tKVRFG3KgjC7DqHCvxb88ofmYybKXMTNXapwvZXjTOgy9ZyINzfq_eH3u9MIaTxlydDHA76fVQ8by7pg";
+CLOUDSTACK.API_KEY = "ORvMDhlOJrttHVBvaIhTkwY8H9JA3t2I8CWUKCzL9Kn9utg_0nHTYCTvzvdV7VXCzTxlnYw5_1saP0JHWxqrxQ";
+CLOUDSTACK.SECRET_KEY = "RY9OZAbwL5J33-e76thAcrCb76_W-OxvwV60qiYTwK_wFhm5q_Lc-jGBAeHsvPNrYVokGYXF_pWx_EwzY7r4pQ";
 CLOUDSTACK.METHODS = {};
 
 //MongoDB configuration
@@ -35,7 +38,7 @@ PRIORITY.JOB = {
     MEDIUM: 2,
     LOW: 1,
     BEST_EFFORT: 0
-}
+};
 
 PRIORITY = {
     USER: {

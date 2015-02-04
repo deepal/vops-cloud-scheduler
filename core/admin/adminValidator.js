@@ -28,7 +28,7 @@ module.exports = function(){
                 }
             }
         });
-    }
+    };
 
     return {validateAdmin: validateAdmin};
-}
+};
