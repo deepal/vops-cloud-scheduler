@@ -134,7 +134,7 @@ module.exports = function (zSession) {
         //TODO: register a template for VM here
     };
 
-    var deployVM = function (selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, callback) {
+    var deployVM = function (selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, allocationID, callback) {
         var hostID = selectedHost.cloudstackID;
         var templateID = authorizedRequest.requestContent.group[0].image[0].id[0]; //TODO: template ID should be given through authorizedRequest
 
@@ -145,23 +145,41 @@ module.exports = function (zSession) {
             }
             else{
                 var zoneID = result.listzonesresponse.zone[0].id;
-
                 if(vmGroupID){
-                    cloudstack.execute('deployVirtualMachine', {
-                        serviceofferingid: serviceOfferingID,
-                        templateid: templateID,
-                        diskofferingid: diskOfferingID,
-                        zoneid: zoneID,
-                        group: vmGroupID,
-                        hostid: hostID,
-                        hypervisor: HYPERVISOR
-                    }, function (err, res) {
-                        if(err){
-                            callback(response.error(500, 'Cloudstack error!', err));
+
+                    var allocation = new Allocation({
+                        _id: allocationID,
+                        from: Date.now(),
+                        expires: null,
+                        userSession: authorizedRequest.session,
+                        allocationTimestamp: Date.now(),
+                        allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
+                        vmGroupID: vmGroupID,
+                        allocationRequestContent: {}//authorizedRequest.requestContent
+                    });
+
+                    allocation.save(function (err) {
+                        if (err) {
+                            callback(response.error(500, 'Database Error!', err));
                         }
-                        else{
-                            console.log("VM is being deployed !");
-                            callback(null, res);
+                        else {
+                            cloudstack.execute('deployVirtualMachine', {
+                                serviceofferingid: serviceOfferingID,
+                                templateid: templateID,
+                                diskofferingid: diskOfferingID,
+                                zoneid: zoneID,
+                                group: vmGroupID,
+                                hostid: hostID,
+                                hypervisor: HYPERVISOR
+                            }, function (err, res) {
+                                if(err){
+                                    callback(response.error(500, 'Cloudstack error!', err));
+                                }
+                                else{
+                                    console.log("VM is being deployed !");
+                                    callback(null, res);
+                                }
+                            });
                         }
                     });
                 }
@@ -203,7 +221,6 @@ module.exports = function (zSession) {
         });
 
         var thisAllocationId = (require('mongoose')).Types.ObjectId().toString();
-
         var DBHosts = require('../db/schemas/dbHost');
 
         cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
@@ -224,39 +241,12 @@ module.exports = function (zSession) {
                             }
                             else {
                                 var diskOfferingID = result.creatediskofferingresponse.diskoffering.id;
-                                deployVM(selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, function (err, result) {
+                                deployVM(selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, thisAllocationId, function (err, result) {
                                     if (err) {
                                         callback(err);
                                     }
                                     else {
-                                        var allocation = new Allocation({
-                                            _id: thisAllocationId,
-                                            from: Date.now(),
-                                            expires: null,
-                                            userSession: authorizedRequest.session,
-                                            allocationTimestamp: Date.now(),
-                                            allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
-                                            associatedHosts: [selectedHost],
-                                            vmGroupID: result.createvirtualmachineresponse.virtualmachine.group,
-                                            allocationRequestContent: authorizedRequest.requestContent
-                                        });
-
-                                        allocation.save(function (err) {
-                                            if (err) {
-                                                cloudstack.execute('destroyVirtualMachine', {}, function (err, res) {
-                                                    if(err){
-                                                        callback(response.error(500, 'Cloudstack Error!', err));
-                                                    }
-                                                    else{
-                                                        //if database error occured, destroy the created virtualmachine and return error
-                                                        callback(response.error(500, 'Database Error!', err));
-                                                    }
-                                                });
-                                            }
-                                            else {
-                                                callback(null, response.success(200, 'Resource allocation successful!', result));
-                                            }
-                                        });
+                                        callback(null, response.success(200, 'Resource allocation successful!', result));
                                     }
                                 });
                             }

@@ -92,9 +92,7 @@ module.exports = function () {
                                 }
                             });
                         });
-
                     }
-
                 });
 
                 //callback(null, "This is the selected host by migration scheduler");

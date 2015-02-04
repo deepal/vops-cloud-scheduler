@@ -5,7 +5,7 @@ var successMessage = function(code, friendlyMessageString, returnObject){
         message: friendlyMessageString,
         returnObject: returnObject
     }
-}
+};
 
 var errorMessage = function (code, friendlyMessageString, errorObject) {
     return {
@@ -14,7 +14,7 @@ var errorMessage = function (code, friendlyMessageString, errorObject) {
         message: friendlyMessageString,
         returnObject: errorObject
     }
-}
+};
 
 module.exports = {
     success: successMessage,
