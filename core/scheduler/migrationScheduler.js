@@ -62,42 +62,48 @@ module.exports = function () {
 
     };
 
-    var findHostByMigration = function (authorizedRequest, allPossibleHosts, callback) {
+    var findHostByMigration = function (index,authorizedRequest, allPossibleHosts, callback) {
 
-        var candidate = findMinHost(allPossibleHosts, authorizedRequest);
+        if(index >= allPossibleHosts.length){
+            //if all hosts are checked and no suitable host found? return empty
+            callback(null, null);
+        }
+        else{
+            var candidate = findMinHost(allPossibleHosts, authorizedRequest);
 
-        Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
-            if(err){
-                callback(response.error(500, "Database error!", err));
-            }
-            else{
+            Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
+                if(err){
+                    callback(response.error(500, "Database error!", err));
+                }
+                else{
 
-                var vmList = [];
+                    var vmList = [];
 
-                cloudstack.execute('listVirtualMachines', { hostid: result.cloudstackID }, function(err, result){
+                    cloudstack.execute('listVirtualMachines', { hostid: result.cloudstackID }, function(err, result){
 
-                    if(err){
-                        callback(response.error(500, 'Cloudstack Error!', err));
-                    }
-                    else{
-                        var vmListResponse = result.listvirtualmachinesresponse.virtualmachine; //TODO: need to check the reponse format
+                        if(err){
+                            callback(response.error(500, 'Cloudstack Error!', err));
+                        }
+                        else{
+                            var vmListResponse = result.listvirtualmachinesresponse.virtualmachine; //TODO: need to check the reponse format
 
-                        getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
-                            Hosts.find({}).exec(function (err, hostArray) {
-                                if(err){
-                                    callback(response.error(500, 'Database Error', err));
-                                }
-                                else{
-                                    checkVMMigratability(vmList, hostArray, 0, allPossibleHosts, _.clone(allPossibleHosts));
-                                }
+                            getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
+                                Hosts.find({}).exec(function (err, hostArray) {
+                                    if(err){
+                                        callback(response.error(500, 'Database Error', err));
+                                    }
+                                    else{
+                                        checkVMMigratability(vmList, hostArray, 0, allPossibleHosts, _.clone(allPossibleHosts));
+                                    }
+                                });
                             });
-                        });
-                    }
-                });
+                        }
+                    });
 
-                //callback(null, "This is the selected host by migration scheduler");
-            }
-        });
+                    //callback(null, "This is the selected host by migration scheduler");
+                }
+            });
+        }
 
     };
 

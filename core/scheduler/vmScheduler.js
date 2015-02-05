@@ -16,16 +16,16 @@ module.exports = function (zSession) {
     //TODO: Pending test
     var requestForAllocation = function (jsonAllocRequest, callback) {
 
-        authService.authorizeResourceRequest(jsonAllocRequest, function (err, authorizedRequest) {
+        authService.authorizeResourceRequest(jsonAllocRequest, function (err, authorizedRequest) {  //Authenticate and authorize incoming request
             if (err) {
                 callback(err);
             }
             else {
-                console.log(JSON.stringify(authorizedRequest));
+                //console.log(JSON.stringify(authorizedRequest));
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
-                hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) {
+                hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) { //find available resources using host filter
 
-                    if (filteredHostsInfo.length == 0) {
+                    if (filteredHostsInfo.length == 0) {        // if there seem to be no space in hosts to allocate the request, call priority scheduler
                         var priorityScheduler = new (require('./priorityScheduler'))();
                         /// do whatever you do with priority scheduler
                         priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
@@ -51,12 +51,12 @@ module.exports = function (zSession) {
                     }
                     else {
                         //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
-                        findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {
+                        findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {       //find the best host among available to allocate the request
                             if(err){
                                 callback(err);
                             }
                             else{
-                                allocateRequest(bestHost, authorizedRequest, function (err, result) {
+                                allocateRequest(bestHost, authorizedRequest, function (err, result) {       //allocate request on the selected host
                                     if (err) {
                                         callback(err);
                                     }
@@ -86,7 +86,7 @@ module.exports = function (zSession) {
 
         var offeringName = 'ComputeOffering-' + authorizedRequest.session.userID + Date.now();
 
-        cloudstack.execute('createServiceOffering', {
+        cloudstack.execute('createServiceOffering', {       //create a service offering via Cloudstack API
             displaytext: offeringName,
             name: offeringName,
             cpunumber: requestingCores,
@@ -103,11 +103,11 @@ module.exports = function (zSession) {
 
         var type = authorizedRequest.requestContent.group[0].image[0].type[0];
 
-        if(type == 'iso'){
+        if(type == 'iso'){      //If template type is ISO, it is required to create a service offering
             var requestingStorage = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_storage[0].primary[0]), authorizedRequest.requestContent.group[0].min_storage[0].unit[0], 'gb');
             var diskOfferingName = 'DiskOffering-' + authorizedRequest.session.userID + Date.now();
 
-            cloudstack.execute('createDiskOffering', {
+            cloudstack.execute('createDiskOffering', {      //create service offering via Cloudstack API
                 displaytext: diskOfferingName,
                 name: diskOfferingName,
                 disksize: requestingStorage,
@@ -121,7 +121,7 @@ module.exports = function (zSession) {
                 }
             });
         }
-        else if(type == 'template'){
+        else if(type == 'template'){    //If template type is 'template', virtual disk can be directly attached. no need of a disk offering
             callback(null);
         }
         else{
@@ -139,15 +139,15 @@ module.exports = function (zSession) {
         var templateID = authorizedRequest.requestContent.group[0].image[0].id[0]; //TODO: template ID should be given through authorizedRequest
 
         //list all available zones, take the first zone's id and deploy vm there (zoneid is required when deploying a VM)
-        cloudstack.execute('listZones', {available: true}, function (err, result) {
+        cloudstack.execute('listZones', {available: true}, function (err, result) {     //list available zones to allocate VM
             if(err){
                 callback(response.error(500, "Cloudstack error!", err));
             }
             else{
-                var zoneID = result.listzonesresponse.zone[0].id;
+                var zoneID = result.listzonesresponse.zone[0].id;       //select the first zone among them to allocate VM
                 if(vmGroupID){
 
-                    var allocation = new Allocation({
+                    var allocation = new Allocation({           //create new resource allocation request model to save in the database
                         _id: allocationID,
                         from: Date.now(),
                         expires: null,
@@ -158,12 +158,12 @@ module.exports = function (zSession) {
                         allocationRequestContent: authorizedRequest.requestContent
                     });
 
-                    allocation.save(function (err) {
+                    allocation.save(function (err) {        //save allocation in database
                         if (err) {
                             callback(response.error(500, 'Database Error!', err));
                         }
                         else {
-                            cloudstack.execute('deployVirtualMachine', {
+                            cloudstack.execute('deployVirtualMachine', {        //deploy vm via cloudstack api after saving allocation in the database
                                 serviceofferingid: serviceOfferingID,
                                 templateid: templateID,
                                 diskofferingid: diskOfferingID,
@@ -173,10 +173,17 @@ module.exports = function (zSession) {
                                 hypervisor: HYPERVISOR
                             }, function (err, res) {
                                 if(err){
-                                    callback(response.error(500, 'Cloudstack error!', err));
+                                    callback(response.error(500, 'Cloudstack error!', err));    //TODO: If this fails, it is required to delete the inserted allocation info from database
                                 }
                                 else{
-                                    console.log("VM is being deployed !");
+                                    console.log("VM Deploy request is being processed\n" +
+                                    "\tService offering ID - "+serviceOfferingID+"\n" +
+                                    "\tTemplate ID - "+templateID+"\n" +
+                                    "\tDisk Offering ID - "+diskOfferingID+"\n" +
+                                    "\tZone ID - "+zoneID+"\n" +
+                                    "\tVM Group ID - "+vmGroupID+"\n" +
+                                    "\tHost ID - "+hostID+"\n" +
+                                    "\tHypervisor - "+HYPERVISOR);
                                     callback(null, res);
                                 }
                             });
@@ -184,12 +191,12 @@ module.exports = function (zSession) {
                     });
                 }
                 else{
-                    cloudstack.execute('createInstanceGroup', {}, function (err, res) {
+                    cloudstack.execute('createInstanceGroup', {}, function (err, res) {     //if no group specified, create a group, this is specially for the first VM of a group
                         if(err){
                             callback(response.error(500, 'Cloudstack error!', err));
                         }
                         else{
-                            cloudstack.execute('deployVirtualMachine', {
+                            cloudstack.execute('deployVirtualMachine', {    //then deploy
                                 serviceofferingid: serviceOfferingID,
                                 templateid: templateID,
                                 diskofferingid: diskOfferingID,
@@ -201,6 +208,14 @@ module.exports = function (zSession) {
                                     callback(response.error(500, 'Cloudstack error!', err));
                                 }
                                 else{
+                                    console.log("VM Deploy request is being processed\n" +
+                                    "\tService offering ID - "+serviceOfferingID+"\n" +
+                                    "\tTemplate ID - "+templateID+"\n" +
+                                    "\tDisk Offering ID - "+diskOfferingID+"\n" +
+                                    "\tZone ID - "+zoneID+"\n" +
+                                    "\tVM Group ID - "+vmGroupID+"\n" +
+                                    "\tHost ID - "+hostID+"\n" +
+                                    "\tHypervisor - "+HYPERVISOR);
                                     callback(null, res);
                                 }
                             });
@@ -220,7 +235,7 @@ module.exports = function (zSession) {
             secretKey: CLOUDSTACK.SECRET_KEY
         });
 
-        var thisAllocationId = (require('mongoose')).Types.ObjectId().toString();
+        var thisAllocationId = (require('mongoose')).Types.ObjectId().toString();   //create a allocation ID using an ObjectID
         var DBHosts = require('../db/schemas/dbHost');
 
         cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
@@ -229,19 +244,19 @@ module.exports = function (zSession) {
                 callback(response.error(500, 'Cloudstack error!', err));
             }
             else {
-                createServiceOffering(authorizedRequest, function (err, result) {
+                createServiceOffering(authorizedRequest, function (err, result) {   //create a srevice offering
                     if (err) {
                         callback(err);
                     }
                     else {
                         var serviceOfferingID = result.createserviceofferingresponse.serviceoffering.id;
-                        createDiskOffering(authorizedRequest, function (err, result) {
+                        createDiskOffering(authorizedRequest, function (err, result) {      //create a disk offering if needed
                             if (err) {
                                 callback(err);
                             }
                             else {
                                 var diskOfferingID = result.creatediskofferingresponse.diskoffering.id;
-                                deployVM(selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, thisAllocationId, function (err, result) {
+                                deployVM(selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, thisAllocationId, function (err, result) { //deploy vm
                                     if (err) {
                                         callback(err);
                                     }
@@ -258,7 +273,7 @@ module.exports = function (zSession) {
     };
 
 
-    var findBestHost = function (filteredHostsInfo, authorizedRequest, callback) {
+    var findBestHost = function (filteredHostsInfo, authorizedRequest, callback) {      //select the best host among the ones selected from the host filter
 
         var utilFunctions = require('../util/utilFunctions')();
         var getDBHostByZabbixId = utilFunctions.getDBHostByZabbixId;
@@ -268,16 +283,16 @@ module.exports = function (zSession) {
         if (filteredHostsInfo.length == 1) {
             //TODO: call getDBHostByZabbixId() here
 
-            getDBHostByZabbixId(filteredHostsInfo[0].hostid, function (err, dbHost) {
+            getDBHostByZabbixId(filteredHostsInfo[0].hostId, function (err, dbHost) {   //to query database using zabbix host id
                 if(err){
                     callback(response.error(500, "Database Error !", err));
                 }
                 else{
+                    console.log("Selected Host : "+ dbHost.ipAddress);
                     callback(null, dbHost);
                 }
             });
 
-            callback(null, filteredHostsInfo[0]);
         }
         else {
 
@@ -305,6 +320,7 @@ module.exports = function (zSession) {
                         callback(response.error(500, "Database Error !", err));
                     }
                     else{
+                        console.log("Selected Host : "+ dbHost.ipAddress);
                         callback(null, dbHost);
                     }
                 });
