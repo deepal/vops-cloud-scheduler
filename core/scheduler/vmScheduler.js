@@ -155,7 +155,7 @@ module.exports = function (zSession) {
                         allocationTimestamp: Date.now(),
                         allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
                         vmGroupID: vmGroupID,
-                        allocationRequestContent: {}//authorizedRequest.requestContent
+                        allocationRequestContent: authorizedRequest.requestContent
                     });
 
                     allocation.save(function (err) {
@@ -308,11 +308,7 @@ module.exports = function (zSession) {
                         callback(null, dbHost);
                     }
                 });
-
             });
-
-
-
         }
 
 
