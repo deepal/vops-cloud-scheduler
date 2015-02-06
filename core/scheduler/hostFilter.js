@@ -280,7 +280,7 @@ module.exports = function (resourceRequest) {
         }
         else {
             var conditions = {zabbixItemID: hostStats[statHostIndex].itemInfo[statItemIndex].itemId};
-            var update = {$set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value}};
+            var update = {$set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value, last_updated: Date.now()}};
             var options = {upsert: true};
 
             EwmaSchema.update(conditions, update, options, function (err) {

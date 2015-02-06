@@ -2,5 +2,6 @@ var mongoose = require('mongoose');
 
 module.exports = mongoose.model('DBEwma', {
     zabbixItemID: Number,
-    ewma_last: Number
+    ewma_last: Number,
+    last_updated: Date
 });
