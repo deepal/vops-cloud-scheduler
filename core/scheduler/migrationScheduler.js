@@ -2,6 +2,7 @@ module.exports = function () {
 
     var db = require('../db');
     var Hosts = require('../db/schemas/dbHost');
+    var unitConverter = require('../util/unitConverter')();
     var _ = require('underscore');
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
@@ -22,54 +23,35 @@ module.exports = function () {
         }
     };
 
-    var findMinHost = function (hostsInfo, authorizedRequest) {
+    var findMaxMemHost = function (hostsInfo, authorizedRequest) {
 
-        var askingMemory = authorizedRequest.requestContent.group[0].min_memory[0].size[0];
+        var askingMemory = unitConverter.convertMemoryAndStorage(authorizedRequest.requestContent.group[0].min_memory[0].size[0],authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
 
-        switch (authorizedRequest.requestContent.group[0].min_memory[0].unit[0].toLowerCase()) {
-            case 'b':
-                break;
-            case 'kb':
-                askingMemory = askingMemory * 1024;
-                break;
-            case 'mb':
-                askingMemory = askingMemory * 1024 * 1024;
-                break;
-            case 'gb':
-                askingMemory = askingMemory * 1024 * 1024 * 1024;
-                break;
-            case 'tb':
-                askingMemory = askingMemory * 1024 * 1024 * 1024 * 1024;
-                break;
-            default:
-                return false;
-        }
-
-        var minMemHostIndex = 0;
-        var minMemHost = hostsInfo[minMemHostIndex];
-        var minMemory = getValueByZabbixKey(hostsInfo[minMemHostIndex], 'system.memory.size[available]');
+        var maxMemHostIndex = 0;
+        var maxMemHost = hostsInfo[maxMemHostIndex];
+        var maxMemory = getValueByZabbixKey(hostsInfo[maxMemHostIndex], 'system.memory.size[available]');
 
         for (var i = 0; i < hostsInfo.length; i++) {
-            var currentHostMemory = getValueByZabbixKey(hostsInfo[i], 'system.memory.size[total]');
-            if (currentHostMemory < minMemory) {
-                minMemory = currentHostMemory;
-                minMemHostIndex = i;
-                minMemHost = hostsInfo[i];
+            var currentHostMemory = getValueByZabbixKey(hostsInfo[i], 'system.memory.size[available]');
+            if ((currentHostMemory > maxMemory) && (askingMemory < currentHostMemory)) {
+                maxMemory = currentHostMemory;
+                maxMemHostIndex = i;
+                maxMemHost = hostsInfo[i];
             }
         }
 
-        return hostsInfo.splice(minMemHostIndex, 1);
+        return hostsInfo.splice(maxMemHostIndex, 1);
 
     };
 
-    var findHostByMigration = function (index,authorizedRequest, allPossibleHosts, callback) {
+    var findHostByMigration = function (index, authorizedRequest, allPossibleHosts, callback) {
 
         if(index >= allPossibleHosts.length){
             //if all hosts are checked and no suitable host found? return empty
             callback(null, null);
         }
         else{
-            var candidate = findMinHost(allPossibleHosts, authorizedRequest);
+            var candidate = findMaxMemHost(allPossibleHosts, authorizedRequest);
 
             Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
                 if(err){

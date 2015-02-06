@@ -6,7 +6,6 @@ module.exports = function (zSession) {
     var response = require('../../config/responseMessages');
     var unitConverter = require('../../core/util/unitConverter')();
 
-
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
         apiKey: CLOUDSTACK.API_KEY,
