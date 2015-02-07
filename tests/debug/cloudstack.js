@@ -157,10 +157,24 @@ var listHosts = function () {
     });
 };
 
+var findHostsForMigration = function () {
+    cloudstack.execute('findHostsForMigration', {virtualmachineid:'7734de0b-109a-4967-8cb8-89f435873385'}, function (err, result) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log(JSON.stringify(result));
+        }
+    });
+};
+
 
 //listHosts();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
 //listVirtualMachines();
 //listZones();
+//findHostsForMigration();
+
+
 deployVM();

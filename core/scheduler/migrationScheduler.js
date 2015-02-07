@@ -17,10 +17,8 @@ module.exports = function () {
             if (host.itemInfo[i].itemKey == key) {
                 return host.itemInfo[i].value;
             }
-            else {
-                return false;
-            }
         }
+        return false;
     };
 
     var findMaxMemHost = function (hostsInfo, authorizedRequest) {
@@ -29,10 +27,10 @@ module.exports = function () {
 
         var maxMemHostIndex = 0;
         var maxMemHost = hostsInfo[maxMemHostIndex];
-        var maxMemory = getValueByZabbixKey(hostsInfo[maxMemHostIndex], 'system.memory.size[available]');
+        var maxMemory = getValueByZabbixKey(hostsInfo[maxMemHostIndex], 'vm.memory.size[available]');
 
         for (var i = 0; i < hostsInfo.length; i++) {
-            var currentHostMemory = getValueByZabbixKey(hostsInfo[i], 'system.memory.size[available]');
+            var currentHostMemory = getValueByZabbixKey(hostsInfo[i], 'vm.memory.size[available]');
             if ((currentHostMemory > maxMemory) && (askingMemory < currentHostMemory)) {
                 maxMemory = currentHostMemory;
                 maxMemHostIndex = i;
@@ -40,7 +38,7 @@ module.exports = function () {
             }
         }
 
-        return hostsInfo.splice(maxMemHostIndex, 1);
+        return hostsInfo[0];
 
     };
 
