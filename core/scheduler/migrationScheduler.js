@@ -26,7 +26,7 @@ module.exports = function () {
         var askingMemory = unitConverter.convertMemoryAndStorage(authorizedRequest.requestContent.group[0].min_memory[0].size[0],authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
 
         var maxMemHostIndex = 0;
-        var maxMemHost = hostsInfo[maxMemHostIndex];
+        var maxMemHost = _.clone(hostsInfo[maxMemHostIndex]);
         var maxMemory = getValueByZabbixKey(hostsInfo[maxMemHostIndex], 'vm.memory.size[available]');
 
         for (var i = 0; i < hostsInfo.length; i++) {
@@ -34,11 +34,11 @@ module.exports = function () {
             if ((currentHostMemory > maxMemory) && (askingMemory < currentHostMemory)) {
                 maxMemory = currentHostMemory;
                 maxMemHostIndex = i;
-                maxMemHost = hostsInfo[i];
+                maxMemHost = _.clone(hostsInfo[i]);
             }
         }
 
-        return hostsInfo[0];
+        return hostsInfo.splice(maxMemHostIndex,1);
 
     };
 
@@ -49,7 +49,7 @@ module.exports = function () {
             callback(null, null);
         }
         else{
-            var candidate = findMaxMemHost(allPossibleHosts, authorizedRequest);
+            var candidate = findMaxMemHost(_.clone(allPossibleHosts), authorizedRequest);
 
             Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
                 if(err){
@@ -65,7 +65,7 @@ module.exports = function () {
                             callback(response.error(500, 'Cloudstack Error!', err));
                         }
                         else{
-                            var vmListResponse = result.listvirtualmachinesresponse.virtualmachine; //TODO: need to check the reponse format
+                            var vmListResponse = result.listvirtualmachinesresponse.virtualmachine;
 
                             getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
                                 Hosts.find({}).exec(function (err, hostArray) {
@@ -88,7 +88,6 @@ module.exports = function () {
     };
 
 
-    //TODO: Needs testing
     var getVMSpecs = function (vmIndex, vmListResponse, vmList, callback) {
         if(vmIndex == vmListResponse.length){
             callback(null, vmList);
@@ -115,8 +114,8 @@ module.exports = function () {
                         storageType: serviceOffering.storagetype,
                         offerHA: serviceOffering.offerha
                     };
-
-                    getVMSpecs(++vmIndex, vmListResponse, vmList, callback);
+                    vmIndex++;
+                    getVMSpecs(vmIndex, vmListResponse, vmList, callback);
                 }
             });
         }
@@ -124,24 +123,31 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vmList, hostInfo, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
+    var checkVMMigratability = function (vmList, hosts, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
         //Setting up vmList array in to decreasing order of memory
-       vmList.sort(compareDescending());
-        console.log(vmList);
+        for(var i=0; i<vmList.length; i++){
+            console.log(vmList[i].memory);
+        }
+       vmList.sort(function(a,b){return b.memory - a.memory});
+        console.log("---------------");
+
+        for(var i=0; i<vmList.length; i++){
+            console.log(vmList[i].memory);
+        }
     };
 
-    var compareDescending =function (attribute1, attribute2) {
-        if(attribute1>attribute2){
+   /* var compareDescending =function (attribute1, attribute2) {
+        if(attribute1.memory>attribute2.memory){
             return -1;
         }
-        else if(attribute1<attribute2){
+        else if(attribute1.memory<attribute2.memory){
             return 1;
         }
-        else if(attribute1 == attribute2){
+        else if(attribute1.memory == attribute2.memory){
             return 0;
         }
 
-    };
+    };*/
 
     return {
         findHostByMigration: findHostByMigration
