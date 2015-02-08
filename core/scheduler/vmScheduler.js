@@ -114,7 +114,7 @@ module.exports = function (zSession) {
                 storagetype: 'shared'
             }, function (err, res) {
                 if(err){
-                    callback(response.error(500, "Cloudstack Error!", err));
+                    callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                 }
                 else{
                     callback(null, res);
@@ -125,7 +125,7 @@ module.exports = function (zSession) {
             callback(null);
         }
         else{
-            callback(response.error(200, "Unsupported image format!", null));
+            callback(response.error(200, ERROR.CUSTOM_ERROR("Unsupported image format!"), null));
         }
 
     };
@@ -141,7 +141,7 @@ module.exports = function (zSession) {
         //list all available zones, take the first zone's id and deploy vm there (zoneid is required when deploying a VM)
         cloudstack.execute('listZones', {available: true}, function (err, result) {     //list available zones to allocate VM
             if(err){
-                callback(response.error(500, "Cloudstack error!", err));
+                callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
             }
             else{
                 var zoneID = result.listzonesresponse.zone[0].id;       //select the first zone among them to allocate VM
@@ -173,7 +173,7 @@ module.exports = function (zSession) {
                 else{
                     cloudstack.execute('createInstanceGroup', {}, function (err, res) {     //if no group specified, create a group, this is specially for the first VM of a group
                         if(err){
-                            callback(response.error(500, 'Cloudstack error!', err));
+                            callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                         }
                         else{
                             cloudstack.execute('deployVirtualMachine', {    //then deploy
@@ -185,7 +185,7 @@ module.exports = function (zSession) {
                                 hostid: hostID
                             }, function (err, res) {
                                 if(err){
-                                    callback(response.error(500, 'Cloudstack error!', err));
+                                    callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                                 }
                                 else{
                                     console.log("VM Deploy request is being processed\n" +
@@ -218,7 +218,7 @@ module.exports = function (zSession) {
             hypervisor: HYPERVISOR
         }, function (err, res) {
             if(err){
-                callback(response.error(500, 'Cloudstack error!', err));        //if error occured in cloudstack, return the error through callback
+                callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));        //if error occured in cloudstack, return the error through callback
             }
             else{
 
@@ -304,7 +304,7 @@ module.exports = function (zSession) {
         cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
             var vmGroupID = result.createinstancegroupresponse.instancegroup.id;
             if (err) {
-                callback(response.error(500, 'Cloudstack error!', err));
+                callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
             }
             else {
                 createServiceOffering(authorizedRequest, function (err, result) {   //create a srevice offering
@@ -348,7 +348,7 @@ module.exports = function (zSession) {
 
             getDBHostByZabbixId(filteredHostsInfo[0].hostId, function (err, dbHost) {   //to query database using zabbix host id
                 if(err){
-                    callback(response.error(500, "Database Error !", err));
+                    callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                 }
                 else{
                     console.log("Selected Host : "+ dbHost.ipAddress);
@@ -380,7 +380,7 @@ module.exports = function (zSession) {
 
                 getDBHostByZabbixId(minMemoryHostInfo.hostId, function (err, dbHost) {
                     if(err){
-                        callback(response.error(500, "Database Error !", err));
+                        callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                     }
                     else{
                         console.log("Selected Host : "+ dbHost.ipAddress);
