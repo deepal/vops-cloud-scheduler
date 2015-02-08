@@ -5,6 +5,7 @@ module.exports = function (zSession) {
     var DBHost = require('../db/schemas/dbHost');
     var response = require('../../config/responseMessages');
     var unitConverter = require('../../core/util/unitConverter')();
+    var cloudstackUtils = require('../util/cloudstackUtils')();
 
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
@@ -146,48 +147,28 @@ module.exports = function (zSession) {
                 var zoneID = result.listzonesresponse.zone[0].id;       //select the first zone among them to allocate VM
                 if(vmGroupID){
 
-                    var allocation = new Allocation({           //create new resource allocation request model to save in the database
-                        _id: allocationID,
-                        from: Date.now(),
-                        expires: null,
-                        userSession: authorizedRequest.session,
-                        allocationTimestamp: Date.now(),
-                        allocationPriority: authorizedRequest.requestContent.group[0].priority[0],
+
+                    var params = {
+                        selectedHost : selectedHost,
+                        authorizedRequest: authorizedRequest,
+                        serviceOfferingID: serviceOfferingID,
+                        diskOfferingID: diskOfferingID,
                         vmGroupID: vmGroupID,
-                        allocationRequestContent: authorizedRequest.requestContent
+                        allocationID: allocationID,
+                        hostID: hostID,
+                        templateID: templateID,
+                        zoneID: zoneID
+                    };
+
+                    deployAndSaveInDB(params, function (err, res) {
+                        if(err){
+                            callback(err);
+                        }
+                        else{
+                            callback(null, res);
+                        }
                     });
 
-                    allocation.save(function (err) {        //save allocation in database
-                        if (err) {
-                            callback(response.error(500, 'Database Error!', err));
-                        }
-                        else {
-                            cloudstack.execute('deployVirtualMachine', {        //deploy vm via cloudstack api after saving allocation in the database
-                                serviceofferingid: serviceOfferingID,
-                                templateid: templateID,
-                                diskofferingid: diskOfferingID,
-                                zoneid: zoneID,
-                                group: vmGroupID,
-                                hostid: hostID,
-                                hypervisor: HYPERVISOR
-                            }, function (err, res) {
-                                if(err){
-                                    callback(response.error(500, 'Cloudstack error!', err));    //TODO: If this fails, it is required to delete the inserted allocation info from database
-                                }
-                                else{
-                                    console.log("VM Deploy request is being processed\n" +
-                                    "\tService offering ID - "+serviceOfferingID+"\n" +
-                                    "\tTemplate ID - "+templateID+"\n" +
-                                    "\tDisk Offering ID - "+diskOfferingID+"\n" +
-                                    "\tZone ID - "+zoneID+"\n" +
-                                    "\tVM Group ID - "+vmGroupID+"\n" +
-                                    "\tHost ID - "+hostID+"\n" +
-                                    "\tHypervisor - "+HYPERVISOR);
-                                    callback(null, res);
-                                }
-                            });
-                        }
-                    });
                 }
                 else{
                     cloudstack.execute('createInstanceGroup', {}, function (err, res) {     //if no group specified, create a group, this is specially for the first VM of a group
@@ -224,6 +205,89 @@ module.exports = function (zSession) {
             }
         });
 
+    };
+
+    var deployAndSaveInDB = function (params, callback) {
+        cloudstack.execute('deployVirtualMachine', {        //deploy vm via cloudstack api after saving allocation in the database
+            serviceofferingid: params.serviceOfferingID,
+            templateid: params.templateID,
+            diskofferingid: params.diskOfferingID,
+            zoneid: params.zoneID,
+            group: params.vmGroupID,
+            hostid: params.hostID,
+            hypervisor: HYPERVISOR
+        }, function (err, res) {
+            if(err){
+                callback(response.error(500, 'Cloudstack error!', err));        //if error occured in cloudstack, return the error through callback
+            }
+            else{
+
+                console.log("VM Deploy request is being processed\n" +
+                "\tService offering ID - "+params.serviceOfferingID+"\n" +
+                "\tTemplate ID - "+params.templateID+"\n" +
+                "\tDisk Offering ID - "+params.diskOfferingID+"\n" +
+                "\tZone ID - "+params.zoneID+"\n" +
+                "\tVM Group ID - "+params.vmGroupID+"\n" +
+                "\tHost ID - "+params.hostID+"\n" +
+                "\tHypervisor - "+HYPERVISOR);
+
+                var jobID = res.deployvirtualmachineresponse.jobid;     // get the Asynchronous JobID of VM deploy. Job ID required to get the deployed VM's ID using queryAsyncJobResult API Method
+
+                cloudstackUtils.queryAsyncJobResult(jobID, function (err, res) {
+                    // queryAsyncJobResult method recursively check whether VM deployment is complete and if complete,
+                    // get the jobresult object and collect information about the VM including id, memory, cpucores, cpufreq etc.
+                    if(err){
+                        console.log("Error occured while calling queryAsyncJobResult !\nError info: "+err);
+                    }
+                    else{
+                        if(res.errorcode){
+                            console.log(res);  //if an error code is returned, VM deployment has been failed, log the error.
+                        }
+                        else{
+                            var VMId = virtualmachine.id;
+                            var VMMemory = unitConverter.convertMemoryAndStorage(virtualmachine.memory,'mb', 'b');
+                            var VMCores = virtualmachine.cpunumber;
+                            var VMFreq = virtualmachine.cpuspeed;
+                            var InstanceName = virtualmachine.instancename;
+
+                            var allocation = new Allocation({           //create new resource allocation request model to save in the database
+                                _id: params.allocationID,
+                                VM: {
+                                    VMID: VMId,
+                                    InstanceName: InstanceName,
+                                    HostID: params.hostID,
+                                    GroupID: params.vmGroupID,
+                                    Memory: VMMemory,
+                                    CPUFreq : VMFreq,
+                                    CPUCount: VMCores
+                                },
+                                RequestContent: {
+                                    Content: null,//params.authorizedRequest.requestContent,
+                                    Session: params.authorizedRequest.session
+                                },
+                                AllocationInfo: {
+                                    From: Date.now(),
+                                    To: null,
+                                    TimeStamp: Date.now(),
+                                    Priority: params.authorizedRequest.requestContent.group[0].priority[0]
+                                }
+                            });
+
+                            allocation.save(function (err) {        //save allocation in database
+                                if (err) {
+                                    console.log("Error saving allocation in the database\nError Info: "+err);
+                                }
+                                else {
+                                    callback(null, res);        //if deployVirtualMachine command completes without an error, return a response before saving in the database
+                                }
+                            });
+                        }
+                    }
+                });
+
+
+            }
+        });
     };
 
     //TODO: Pending test

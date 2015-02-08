@@ -1,11 +1,23 @@
 var mongoose = require('mongoose');
 
 module.exports = mongoose.model('DBAllocation', {
-    from: Date,
-    expires: Date,
-    userSession: Object,
-    allocationTimestamp: Date,
-    allocationPriority: Number,
-    vmGroupID: String,
-    allocationRequestContent: Object
+    VM: {
+        VMID: String,
+        InstanceName: String,
+        HostID: String,
+        GroupID: String,
+        Memory: Number,
+        CPUFreq : Number,
+        CPUCount: Number
+    },
+    RequestContent: {
+        Content: Object,
+        Session: Object
+    },
+    AllocationInfo: {
+        From: Date,
+        To: Date,
+        TimeStamp: Date,
+        Priority: Number
+    }
 });

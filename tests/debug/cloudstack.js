@@ -145,6 +145,27 @@ var deployVM = function () {
 
 };
 
+var deployVMInHost = function (hostid, callback) {
+
+    cloudstack.execute('deployVirtualMachine', {
+        response: 'json',
+        serviceofferingid: "0a66a60e-42a7-420b-8352-1e506b782b1b",
+        templateid:        "33e879c7-0cd6-40d6-803a-e1f03495e4e6",
+        zoneid:            "f2b8ec40-938b-4e50-8dc8-7b3514f646c1",
+        diskofferingid:    "1c7546f7-1897-4c2e-bbf9-4f9de2507050",
+        hostid:            hostid,
+        hypervisor: "kvm"
+    }, function (err, result) {
+        if(err){
+            callback(err);
+        }
+        else{
+            callback(null, result);
+        }
+    });
+
+};
+
 
 var listHosts = function () {
     cloudstack.execute('listHosts', {}, function (err, result) {
@@ -178,12 +199,54 @@ var createVMSnapshot = function () {
         }
     });
 };
+
+var queryAsyncJobResultRecurs = function (jobid, callback) {
+    cloudstack.execute('queryAsyncJobResult', {jobid:jobid}, function (err, result) {
+        if (err) {
+            callback(err);
+        }
+        else {
+            if(result.queryasyncjobresultresponse.jobresult){
+                callback(null, result.queryasyncjobresultresponse.jobresult);
+            }
+            else{
+                queryAsyncJobResultRecurs(jobid, callback);
+            }
+        }
+    });
+};
+
 //listHosts();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
-listVirtualMachines();
+//listVirtualMachines();
 //listZones();
 //findHostsForMigration();
 //createVMSnapshot();
 
+//deployVM();
+
+deployVMInHost("f0a10e72-2e17-4d16-bf45-767ba486d4e4", function (err, result) {
+    var jobID = result.deployvirtualmachineresponse.jobid;
+    queryAsyncJobResultRecurs(jobID, function (err, result) {
+        if(err){
+            throw  err;
+        }
+        else{
+            if(result.errorcode){
+                console.log("[!] "+result.errortext);
+            }
+            console.log(JSON.stringify(result));
+        }
+    })
+});
+
+//queryAsyncJobResultRecurs("89e65a39-5b11-408b-970f-b235b53df580", false, function (err, result) {
+//    if(err){
+//        throw  err;
+//    }
+//    else{
+//        console.log(JSON.stringify(result));
+//    }
+//});
 //deployVM();
