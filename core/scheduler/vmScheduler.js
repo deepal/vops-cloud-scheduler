@@ -207,6 +207,22 @@ module.exports = function (zSession) {
 
     };
 
+    var queryAsyncJobResultRecurs = function (jobid, callback) {
+        cloudstack.execute('queryAsyncJobResult', {jobid:jobid}, function (err, result) {
+            if (err) {
+                callback(err);
+            }
+            else {
+                if(result.queryasyncjobresultresponse.jobresult){
+                    callback(null, result.queryasyncjobresultresponse.jobresult);
+                }
+                else{
+                    queryAsyncJobResultRecurs(jobid, callback);
+                }
+            }
+        });
+    };
+
     var deployAndSaveInDB = function (params, callback) {
         cloudstack.execute('deployVirtualMachine', {        //deploy vm via cloudstack api after saving allocation in the database
             serviceofferingid: params.serviceOfferingID,
@@ -231,9 +247,11 @@ module.exports = function (zSession) {
                 "\tHost ID - "+params.hostID+"\n" +
                 "\tHypervisor - "+HYPERVISOR);
 
+                callback(null, res);
+
                 var jobID = res.deployvirtualmachineresponse.jobid;     // get the Asynchronous JobID of VM deploy. Job ID required to get the deployed VM's ID using queryAsyncJobResult API Method
 
-                cloudstackUtils.queryAsyncJobResult(jobID, function (err, res) {
+                queryAsyncJobResultRecurs(jobID, function (err, res) {
                     // queryAsyncJobResult method recursively check whether VM deployment is complete and if complete,
                     // get the jobresult object and collect information about the VM including id, memory, cpucores, cpufreq etc.
                     if(err){
@@ -244,11 +262,11 @@ module.exports = function (zSession) {
                             console.log(res);  //if an error code is returned, VM deployment has been failed, log the error.
                         }
                         else{
-                            var VMId = virtualmachine.id;
-                            var VMMemory = unitConverter.convertMemoryAndStorage(virtualmachine.memory,'mb', 'b');
-                            var VMCores = virtualmachine.cpunumber;
-                            var VMFreq = virtualmachine.cpuspeed;
-                            var InstanceName = virtualmachine.instancename;
+                            var VMId = res.virtualmachine.id;
+                            var VMMemory = unitConverter.convertMemoryAndStorage(res.virtualmachine.memory,'mb', 'b');
+                            var VMCores = res.virtualmachine.cpunumber;
+                            var VMFreq = res.virtualmachine.cpuspeed;
+                            var InstanceName = res.virtualmachine.instancename;
 
                             var allocation = new Allocation({           //create new resource allocation request model to save in the database
                                 _id: params.allocationID,
@@ -262,7 +280,7 @@ module.exports = function (zSession) {
                                     CPUCount: VMCores
                                 },
                                 RequestContent: {
-                                    Content: null,//params.authorizedRequest.requestContent,
+                                    Content: params.authorizedRequest.requestContent.group,
                                     Session: params.authorizedRequest.session
                                 },
                                 AllocationInfo: {
@@ -278,7 +296,7 @@ module.exports = function (zSession) {
                                     console.log("Error saving allocation in the database\nError Info: "+err);
                                 }
                                 else {
-                                    callback(null, res);        //if deployVirtualMachine command completes without an error, return a response before saving in the database
+                                    console.log("Allocation saved in database !");
                                 }
                             });
                         }
