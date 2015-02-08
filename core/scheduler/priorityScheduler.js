@@ -22,7 +22,7 @@ module.exports = function(){
                         allocationPriority: {
                             $lt: authorizedRequest.requestContent.priority
                         }
-                    }).exec(function (err, allocations) {
+                    }).sort({'allocationPriority':1}).exec(function (err, allocations) {
                         if(err){
                             callback(responseMessage.error(500, 'Database Error', err));
                         }

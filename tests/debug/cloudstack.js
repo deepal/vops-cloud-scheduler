@@ -76,7 +76,7 @@ var listVirtualMachines = function () {
             console.log(err);
         }
         else{
-            console.log(result);
+            console.log(JSON.stringify(result));
         }
     });
 };
@@ -168,13 +168,22 @@ var findHostsForMigration = function () {
     });
 };
 
-
+var createVMSnapshot = function () {
+    cloudstack.execute('createVMSnapshot', {virtualmachineid:'54ed65e4-629f-42fc-b984-eaea998723e1'}, function (err, result) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log(JSON.stringify(result));
+        }
+    });
+};
 //listHosts();
 //createServiceOffering('MyOffering','myoffering', 1, 1000, 2048, true);
 //listServiceOfferings();
-//listVirtualMachines();
+listVirtualMachines();
 //listZones();
 //findHostsForMigration();
+//createVMSnapshot();
 
-
-deployVM();
+//deployVM();

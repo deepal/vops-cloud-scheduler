@@ -462,9 +462,39 @@ module.exports = function (resourceRequest) {
                 }
             }
 
+            var hostsWithEnoughCores = [];
+            var memoryHostsCopy = _.clone(possibleMemoryHosts);
+            var askingCores = parseInt(resourceRequest.cpu[0].cores[0]);
+
+            for (var i = 0; i < memoryHostsCopy.length; i++) {
+                for (var j = 0; j < memoryHostsCopy[i].itemInfo.length; j++) {
+                    if (memoryHostsCopy[i].itemInfo[j].itemKey == 'system.cpu.num') {
+
+                        if (askingCores <= memoryHostsCopy[i].itemInfo[j].value) {
+                            hostsWithEnoughCores.push(memoryHostsCopy[i]);
+                        }
+                    }
+                }
+            }
+
+            var hostsWithEnoughFreq = [];
+            var coresHostsCopy = _.clone(hostsWithEnoughCores);
+            var askingFreq = parseInt(resourceRequest.cpu[0].frequency[0]);
+
+            for (var i = 0; i < coresHostsCopy.length; i++) {
+                for (var j = 0; j < coresHostsCopy[i].itemInfo.length; j++) {
+                    if (coresHostsCopy[i].itemInfo[j].itemKey == 'system.cpu.num') {
+
+                        if (askingFreq <= coresHostsCopy[i].itemInfo[j].value) {
+                            hostsWithEnoughFreq.push(coresHostsCopy[i]);
+                        }
+                    }
+                }
+            }
+
             //console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
             //console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            callback(null, candidateHosts, possibleMemoryHosts);
+            callback(null, candidateHosts, hostsWithEnoughFreq);
         });
     };
 
