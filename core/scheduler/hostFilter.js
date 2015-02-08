@@ -1,7 +1,5 @@
 module.exports = function (resourceRequest) {
 
-    require('../../config');
-
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
         apiKey: CLOUDSTACK.API_KEY,
@@ -17,8 +15,9 @@ module.exports = function (resourceRequest) {
 
     var db = require('../../core/db');
     var EwmaSchema = require('../db/schemas/dbItemEWMA');
-    var stats = require('stats-lite');
+    var Hosts = require('../db/schemas/dbHost');
 
+    var stats = require('stats-lite');
     var _ = require('underscore');
 
 
@@ -61,27 +60,40 @@ module.exports = function (resourceRequest) {
     var fetchHostItemInfo = function (zSession, callback) {
 
         var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
-        //call host.get method via zabbix api
-        zapi.exec(ZABBIX.METHODS.hostslist, {}, function (data, rawRes) {
-            if (!data.error) {
-                for (var i =0; i<data.result.length; i++) {
-                    var host = data.result[i];
-                    hosts.push({
-                        hostid: host.hostid,
-                        items: []
-                    });
-                }
 
-                //it is required to call zabbix api request once for each host. Zabbix api provides a way to get
-                //all items belongs to multiple hosts at once. But since when we limit response item count, items which
-                //belongs to some hosts will be cut off. So, we need to send new request for each host.
+        Hosts.find({}).exec(function(err, dbHosts){
+            if(!err) {
+                //call host.get method via zabbix api
+                zapi.exec(ZABBIX.METHODS.hostslist, {}, function (data, rawRes) {
+                    if (!data.error) {
+                        for (var i = 0; i < data.result.length; i++) {
+                            for (var j = 0; j < dbHosts.length; j++) {
+                                if(data.result[i].hostid == dbHosts[j].zabbixID) {
+                                    var host = data.result[i];
+                                    hosts.push({
+                                        hostid: host.hostid,
+                                        items: []
+                                    });
+                                }
+                            }
+                        }
 
-                getHostItems(zapi, 0, hosts, function (error, hostObj) {
-                    callback(null, hostObj);
+                        //it is required to call zabbix api request once for each host. Zabbix api provides a way to get
+                        //all items belongs to multiple hosts at once. But since when we limit response item count, items which
+                        //belongs to some hosts will be cut off. So, we need to send new request for each host.
+
+                        getHostItems(zapi, 0, hosts, function (error, hostObj) {
+                            callback(null, hostObj);
+                        });
+                    }
+                    else {
+                        callback(data.error);
+                    }
                 });
             }
-            else {
-                callback(data.error);
+
+            else{
+             callback(responseInfo.error(500,"Database Error!", err));
             }
         });
     }
