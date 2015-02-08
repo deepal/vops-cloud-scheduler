@@ -1,0 +1,58 @@
+extend layout
+block content
+  head
+    meta(http-equiv='Content-Type', content='text/html; charset=utf-8')
+    |       
+    title Form Page: sampleform
+    script.   
+      var v = new  XMLWriter()
+      v.writeStartDocument(true)
+      v.writeElementString('<VM Count>',document.getElementbyId('VMCount'))
+      
+      v.writeEndDocument()
+      console.log(v.flush())
+
+
+  body
+    form#sampleform.form-group(method='post', action='')
+      p
+        | VM Count: 
+        input.form-control(type='text', id='VMCount', maxlength="10")
+      |    
+      p
+        | ISO: 
+        input.form-control(type='text', id='ISO')
+      |    
+      p
+        | Number of Cores: 
+        input.form-control(type='text', id='NumberofCores')
+      |   &#x9; 
+      p
+        | Capacity in MHZ: 
+        input.form-control(type='text', id='Capacity')
+      |   
+      p
+        | Architecture: 
+        input.form-control(type='text', id='Architecture')
+      |   
+      p
+        | Memory in GB: 
+        input.form-control(type='text', id='Memory')
+      |   
+      p
+        | Storage in GB: 
+        input.form-control(type='text', id='Hard Disk')
+      |   
+      p
+        | Network Bandwidth: 
+        input.form-control(type='text', id='Network')
+      p
+        | Priority: 
+        input.form-control(type='text', id='Priority')
+      |      
+      p
+        input(type='submit', name='Submit', value='Submit')
+
+
+
+  

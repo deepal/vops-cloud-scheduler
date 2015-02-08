@@ -14,17 +14,28 @@ var zabbixLoginCallback = function(data, res) {
     var express = require('express');
     var app = express();
 
+    /*
     app.use(express.static(pubDir));
     app.set('views', viewDir);
     app.set('view engine', 'jade');
-
+    */
+    app.set('views', __dirname + '/views');
+    app.set('view engine', 'jade');
+    
     app.use(bodyParser.json());
     app.use(xmlParser());
     app.use(bodyParser.urlencoded({
         extended: true
     }));
 
-    app.get('/', routes.home);
+    app.use(express.static(__dirname + '/core/public/css'));
+    app.get('/', function (req, res) {
+    res.render('index',
+    { title : 'Home' }
+        );
+    });
+
+    //app.get('/', routes.home);
 
     app.get('/web', routes.webUI);
 
