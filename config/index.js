@@ -7,6 +7,7 @@ ERROR = {
     CLOUDSTACK_ERROR: 'CloudStack Error !',
     IO_ERROR: 'Error in file I/O !',
     HTTP_ERROR: 'Internal HTTP Error !',
+    NO_RESOURCES_TO_ALLOCATE: 'No enough resource to serve your request at this moment !',
     CUSTOM_ERROR: function(errText){
         return 'Unidentified Error! Error message : '+errText;
     }
@@ -24,6 +25,7 @@ CLOUDSTACK.METHODS = {
     LIST_ZONES: 'listZones',
     LIST_SERVICE_OFFERINGS: 'listServiceOfferings',
     DEPLOY_VM: 'deployVirtualMachine',
+    DESTROY_VM: 'destroyVirtualMachine',
     CREATE_VM_GROUP: 'createInstanceGroup',
     CREATE_SERVICE_OFFERING: '',
     CREATE_DISK_OFFERING: '',

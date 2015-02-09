@@ -4,7 +4,7 @@ module.exports = mongoose.model('DBAllocation', {
     VM: {
         VMID: String,
         InstanceName: String,
-        HostID: String,
+        HostInfo: Object,
         GroupID: String,
         Memory: Number,
         CPUFreq : Number,

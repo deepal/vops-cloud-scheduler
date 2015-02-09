@@ -176,29 +176,27 @@ module.exports = function (zSession) {
                             callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                         }
                         else{
-                            cloudstack.execute('deployVirtualMachine', {    //then deploy
-                                serviceofferingid: serviceOfferingID,
-                                templateid: templateID,
-                                diskofferingid: diskOfferingID,
-                                zoneid: zoneID,
-                                group: res.createinstancegroupresponse.instancegroup.id,
-                                hostid: hostID
-                            }, function (err, res) {
+                            var params = {
+                                selectedHost : selectedHost,
+                                authorizedRequest: authorizedRequest,
+                                serviceOfferingID: serviceOfferingID,
+                                diskOfferingID: diskOfferingID,
+                                vmGroupID: res.createinstancegroupresponse.instancegroup.id,
+                                allocationID: allocationID,
+                                hostID: hostID,
+                                templateID: templateID,
+                                zoneID: zoneID
+                            };
+
+                            deployAndSaveInDB(params, function (err, res) {
                                 if(err){
-                                    callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
+                                    callback(err);
                                 }
                                 else{
-                                    console.log("VM Deploy request is being processed\n" +
-                                    "\tService offering ID - "+serviceOfferingID+"\n" +
-                                    "\tTemplate ID - "+templateID+"\n" +
-                                    "\tDisk Offering ID - "+diskOfferingID+"\n" +
-                                    "\tZone ID - "+zoneID+"\n" +
-                                    "\tVM Group ID - "+vmGroupID+"\n" +
-                                    "\tHost ID - "+hostID+"\n" +
-                                    "\tHypervisor - "+HYPERVISOR);
                                     callback(null, res);
                                 }
                             });
+
                         }
                     });
                 }
@@ -268,37 +266,49 @@ module.exports = function (zSession) {
                             var VMFreq = res.virtualmachine.cpuspeed;
                             var InstanceName = res.virtualmachine.instancename;
 
-                            var allocation = new Allocation({           //create new resource allocation request model to save in the database
-                                _id: params.allocationID,
-                                VM: {
-                                    VMID: VMId,
-                                    InstanceName: InstanceName,
-                                    HostID: params.hostID,
-                                    GroupID: params.vmGroupID,
-                                    Memory: VMMemory,
-                                    CPUFreq : VMFreq,
-                                    CPUCount: VMCores
-                                },
-                                RequestContent: {
-                                    Content: params.authorizedRequest.requestContent.group,
-                                    Session: params.authorizedRequest.session
-                                },
-                                AllocationInfo: {
-                                    From: Date.now(),
-                                    To: null,
-                                    TimeStamp: Date.now(),
-                                    Priority: params.authorizedRequest.requestContent.group[0].priority[0]
+                            DBHost.findOne({cloudstackID:params.hostID}).exec(function (err, host) {
+                                if(err){
+                                    callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
+                                }
+                                else{
+                                    var allocation = new Allocation({           //create new resource allocation request model to save in the database
+                                        _id: params.allocationID,
+                                        VM: {
+                                            VMID: VMId,
+                                            InstanceName: InstanceName,
+                                            HostInfo: {
+                                                CloudStackID: host.cloudstackID,
+                                                ZabbixID: host.zabbixID,
+                                                IPAddr: host.ipAddress
+                                            },
+                                            GroupID: params.vmGroupID,
+                                            Memory: VMMemory,
+                                            CPUFreq : VMFreq,
+                                            CPUCount: VMCores
+                                        },
+                                        RequestContent: {
+                                            Content: params.authorizedRequest.requestContent.group,
+                                            Session: params.authorizedRequest.session
+                                        },
+                                        AllocationInfo: {
+                                            From: Date.now(),
+                                            To: null,
+                                            TimeStamp: Date.now(),
+                                            Priority: params.authorizedRequest.requestContent.group[0].priority[0]
+                                        }
+                                    });
+
+                                    allocation.save(function (err) {        //save allocation in database
+                                        if (err) {
+                                            console.log("Error saving allocation in the database\nError Info: "+err);
+                                        }
+                                        else {
+                                            console.log("Allocation saved in database !");
+                                        }
+                                    });
                                 }
                             });
 
-                            allocation.save(function (err) {        //save allocation in database
-                                if (err) {
-                                    console.log("Error saving allocation in the database\nError Info: "+err);
-                                }
-                                else {
-                                    console.log("Allocation saved in database !");
-                                }
-                            });
                         }
                     }
                 });
