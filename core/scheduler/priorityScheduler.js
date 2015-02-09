@@ -8,7 +8,7 @@ module.exports = function(){
 
         var migrationScheduler = new (require('./migrationScheduler'))();
 
-        migrationScheduler.findHostByMigration(0, authorizedRequest, allPossibleHosts, function(error, selectedHost){
+        migrationScheduler.findHostByMigration(authorizedRequest, allPossibleHosts, function(error, selectedHost){
 
             if(error){
                 callback(error);

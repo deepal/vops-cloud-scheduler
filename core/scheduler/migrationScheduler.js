@@ -38,54 +38,71 @@ module.exports = function () {
             }
         }
 
-        return hostsInfo.splice(maxMemHostIndex,1);
+        return hostsInfo.splice(maxMemHostIndex,1)[0];
 
     };
 
-    var findHostByMigration = function (index, authorizedRequest, allPossibleHosts, callback) {
+    var findHostByMigration = function (authorizedRequest, allPossibleHosts, callback) {
 
-        if(index >= allPossibleHosts.length){
-            //if all hosts are checked and no suitable host found? return empty
-            callback(null, null);
-        }
-        else{
-            var candidate = findMaxMemHost(_.clone(allPossibleHosts), authorizedRequest);
+        var hostsInfo = _.clone(allPossibleHosts);
+        findHost(hostsInfo, authorizedRequest, function(err, candidateHost){
+            if(!err){
+                callback(null, candidateHost);
+            }
+            else{
+                callback(err);
+            }
+        });
+    };
 
-            Hosts.find({ zabbixID: candidate.hostId }).exec(function (err, result) {
-                if(err){
-                    callback(response.error(500, "Database error!", err));
-                }
-                else{
+    var findHost = function(hostsInfo, authorizedRequest, callback){
 
-                    var vmList = [];
+        var candidate = findMaxMemHost(hostsInfo, authorizedRequest);
 
-                    cloudstack.execute('listVirtualMachines', { hostid: result.cloudstackID }, function(err, result){
+        Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, hostIds) {
+            if(err){
+                callback(response.error(500, "Database error!", err));
+            }
+            else{
 
-                        if(err){
-                            callback(response.error(500, 'Cloudstack Error!', err));
-                        }
-                        else{
-                            var vmListResponse = result.listvirtualmachinesresponse.virtualmachine;
+                var vmList = [];
 
-                            getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
-                                Hosts.find({}).exec(function (err, hostArray) {
-                                    if(err){
-                                        callback(response.error(500, 'Database Error', err));
+                cloudstack.execute('listVirtualMachines', { hostid: hostIds.cloudstackID }, function(err, result){
+
+                    if(err){
+                        callback(response.error(500, 'Cloudstack Error!', err));
+                    }
+                    else{
+                        var vmListResponse = result.listvirtualmachinesresponse.virtualmachine;
+
+                        getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
+                            Hosts.find({}).exec(function (err, hostArray) {
+                                if(err){
+                                    callback(response.error(500, 'Database Error', err));
+                                }
+                                else{
+                                    //if hostsInfo is null, that mean no other host to migrate
+                                    while(hostsInfo != null) {
+                                        if (checkVMMigratability(vmList, hostArray, hostsInfo)) {
+                                            //candidate to migrate Vms from
+                                            callback(null, candidate);
+                                        }
+                                        else {
+                                            findHost(hostsInfo, authorizedRequest);
+                                        }
                                     }
-                                    else{
-                                        checkVMMigratability(vmList, hostArray, 0, allPossibleHosts, _.clone(allPossibleHosts));
-                                    }
-                                });
+                                    //if all hosts are checked and no suitable host found? return empty
+                                    callback(null, null);
+                                }
                             });
-                        }
-                    });
+                        });
+                    }
+                });
 
-                    //callback(null, "This is the selected host by migration scheduler");
-                }
-            });
-        }
-
-    };
+                //callback(null, "This is the selected host by migration scheduler");
+            }
+        });
+    }
 
 
     var getVMSpecs = function (vmIndex, vmListResponse, vmList, callback) {
@@ -123,31 +140,77 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vmList, hosts, hostIndex, currentUtilizationInfo, predictedUtilizationInfo) {
-        //Setting up vmList array in to decreasing order of memory
-        for(var i=0; i<vmList.length; i++){
-            console.log(vmList[i].memory);
-        }
-       vmList.sort(function(a,b){return b.memory - a.memory});
-        console.log("---------------");
+    var checkVMMigratability = function (vmList, hosts, hostsInfo) {
+        var migrationAllocation = [];
+        var hostIndex =0;
+        var vmCount =0;
 
-        for(var i=0; i<vmList.length; i++){
-            console.log(vmList[i].memory);
-        }
+        //Setting up vmList array in to decreasing order of memory
+       vmList.sort(function(a,b){return b.memory - a.memory});
+
+
+            while(hostIndex < hostsInfo.length) {
+
+                for (var i = 0; i < vmList.length; i++) {
+
+                    var tempUsedMemory = 0;
+                    var hostMemory = getValueByZabbixKey(hostsInfo[hostIndex], 'vm.memory.size[available]');
+
+                    var vmMemory = unitConverter.convertMemoryAndStorage(vmList[i].memory, 'mb', 'b');
+
+                    if (vmMemory <= hostMemory - tempUsedMemory) {
+                        if (migrationAllocation.length == 0) {
+                            migrationAllocation.push({
+                                hostId: vmList[i].hostID,
+                                vmAllocations: []
+                            });
+                            migrationAllocation[0].vmAllocations.push(vmList[i]);
+
+                        }
+                        else {
+                            if (containsHostId(vmList[i].hostID, migrationAllocation)) {
+                                for (var k = 0; k < migrationAllocation.length; k++) {
+                                    if (migrationAllocation[k].hostId == vmList[i].hostID) {
+                                        migrationAllocation[k].vmAllocations.push(vmList[i]);
+                                        break;
+                                    }
+                                }
+                            }
+                            else {
+                                containsHostId(vmList[i].hostID, migrationAllocation);
+                                migrationAllocation.push({
+                                    hostId: vmList[i].hostID,
+                                    vmAllocations: []
+                                });
+                                migrationAllocation[migrationAllocation.length - 1].vmAllocations.push(vmList[i]);
+
+                            }
+                        }
+                        tempUsedMemory = tempUsedMemory + vmMemory;
+                        vmCount++;
+                        if(vmCount==vmList.length){
+                            return true;
+                        }
+
+                    }
+                    else {
+                        hostIndex++;
+                        continue;
+                        }
+                }
+
+            }
+        return false;
     };
 
-   /* var compareDescending =function (attribute1, attribute2) {
-        if(attribute1.memory>attribute2.memory){
-            return -1;
+    var containsHostId = function(value, attributes){
+        for(var i=0; i< attributes.length; i++){
+            if(value == attributes[i].hostId){
+                return true;
+            }
         }
-        else if(attribute1.memory<attribute2.memory){
-            return 1;
-        }
-        else if(attribute1.memory == attribute2.memory){
-            return 0;
-        }
-
-    };*/
+        return false;
+    }
 
     return {
         findHostByMigration: findHostByMigration
