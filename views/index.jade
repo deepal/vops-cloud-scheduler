@@ -1,0 +1,99 @@
+extend layout
+block content
+  head
+    meta(http-equiv='Content-Type', content='text/html; charset=utf-8')
+    |       
+    title Form Page: sampleform
+    script(type='text/javascript',src='jquery-1.11.2.min.js')
+    
+        
+  body
+    form#sampleform.form-group(formname='resource scheduler', onSubmit='Javascript:postxml()')
+      p
+        | VM Count: 
+        input.form-control(type='text', id='VMCount', maxlength="10")
+      |    
+      p
+        | ISO: 
+        input.form-control(type='text', id='ISO')
+      |    
+      p
+        | Number of Cores: 
+        input.form-control(type='text', id='NumberofCores')
+      |   &#x9; 
+      p
+        | Capacity in MHZ: 
+        input.form-control(type='text', id='Capacity')
+      |   
+      p
+        | Architecture: 
+        input.form-control(type='text', id='Architecture')
+      |   
+      p
+        | Memory in GB: 
+        input.form-control(type='text', id='Memory')
+      |   
+      p
+        | Storage in GB: 
+        input.form-control(type='text', id='Hard Disk')
+      |   
+      p
+        | Network Bandwidth: 
+        input.form-control(type='text', id='Network')
+      p
+        | Priority: 
+        input.form-control(type='text', id='Priority')
+      |      
+      p
+        input(type='submit', name='Submit', value='Submit')
+    script.
+      function postxml(){
+      var vmcount=(document.getElementById('VMCount').value);
+      var iso=(document.getElementById('ISO').value);
+      var cores=(document.getElementById('NumberofCores').value);
+      var speed= (document.getElementById('Capacity').value);
+      var architecture=(document.getElementById('Architecture').value);
+      var memory = (document.getElementById('Memory').value);
+      var hard= (document.getElementById('Hard Disk').value);
+      var network= (document.getElementById('Network').value);
+      var priority= (document.getElementById('Priority').value);
+      
+      var xmlstring='<?xml version="1.0" encoding="UTF-8"?>'
+              +'<resource_request>'
+              +'<group>'
+              +'<vm_count>'+vmcount+'</vm_count>'
+              +'<image>'
+              +'<type>'+iso+'</type>'
+              +'</image>'
+              +'<cpu>'
+              +'<cores>'+cores+'</cores>'
+              +'<frequency>'+speed+'</frequency>'
+              +'<unit>GHz</unit>'
+              +'<architecture>'+architecture+'</architecture>'
+              +'</cpu>'
+              +'<min_memory>'
+              +'<size>'+memory+'</size>'
+              +'<unit>GB</unit>'
+              +'</min_memory>'
+              +'<min_storage>'
+              +'<primary>'+hard+'</primary>'
+              +'<unit>GB</unit>'
+              +'</min_storage>'
+              +'<network>'
+              +'<min_bandwidth>'+network+'</min_bandwidth>'
+              +'<unit>Mbps</unit>'
+              +'</network>'
+              +'<priority>'+priority+'</priority>'
+              +'</group>'
+              +'</resource_request>';
+      var parser= new DOMParser();
+      xmlDoc = parser.parseFromString(xmlstring, "text/xml");
+      alert(new XMLSerializer().serializeToString(xmlDoc));
+      }
+        
+
+    
+
+
+
+  
