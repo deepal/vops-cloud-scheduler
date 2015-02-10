@@ -19,8 +19,8 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 	<dependency>
-        <groupId>net.neoremind.sshxcute</groupId>
-        <artifactId>sshxcute</artifactId>
+        <groupId>com.automatethebox</groupId>
+        <artifactId>apis</artifactId>
         <version>1.0</version>
 	</dependency>
     </dependencies>
