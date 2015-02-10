@@ -18,6 +18,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+	<dependency>
+        <groupId>net.neoremind.sshxcute</groupId>
+        <artifactId>sshxcute</artifactId>
+        <version>1.0</version>
+	</dependency>
     </dependencies>
 
 
@@ -34,6 +39,15 @@
         <repository>
             <id>spring-releases</id>
             <url>https://repo.spring.io/libs-release</url>
+        </repository>
+        <repository>
+            <id>codelds</id>
+            <url>https://code.lds.org/nexus/content/groups/main-repo</url>
+        </repository>
+        <repository>
+            <id>java.net2</id>
+            <name>Repository hosting the jee6 artifacts</name>
+            <url>http://download.java.net/maven/2</url>
         </repository>
     </repositories>
     <pluginRepositories>
