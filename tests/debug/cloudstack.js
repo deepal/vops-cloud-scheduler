@@ -226,7 +226,7 @@ var queryAsyncJobResultRecurs = function (jobid, callback) {
 
 //deployVM();
 
-deployVMInHost("f0a10e72-2e17-4d16-bf45-767ba486d4e4", function (err, result) {
+deployVMInHost("fd0a9107-27e3-495e-94c8-412c5879611d", function (err, result) {
     var jobID = result.deployvirtualmachineresponse.jobid;
     queryAsyncJobResultRecurs(jobID, function (err, result) {
         if(err){

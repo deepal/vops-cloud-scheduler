@@ -7,7 +7,10 @@ ERROR = {
     CLOUDSTACK_ERROR: 'CloudStack Error !',
     IO_ERROR: 'Error in file I/O !',
     HTTP_ERROR: 'Internal HTTP Error !',
+    UNKNOWN_ERROR: 'An Unknown Error occured! May be due to an unknown response from JVirsh Service!',s
     NO_RESOURCES_TO_ALLOCATE: 'No enough resource to serve your request at this moment !',
+    JVIRSH_SERVICE_ERROR: 'Error communicating with JVirsh Preemption Web Service',
+    INTERNAL_JVIRSH_ERROR: 'Internal Error occured in JVirsh',
     CUSTOM_ERROR: function(errText){
         return 'Unidentified Error! Error message : '+errText;
     }

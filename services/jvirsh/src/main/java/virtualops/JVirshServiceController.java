@@ -14,16 +14,10 @@ import net.neoremind.sshxcute.task.impl.ExecCommand;
 public class JVirshServiceController {
 
     @RequestMapping(method = RequestMethod.POST)
-<<<<<<< HEAD
-<<<<<<< HEAD
+
+
     public Response greeting(@RequestBody final PreemptionTicket pts) {
-        //Do whatever with the PreemptionTicket !!!
-        return  new Response(200, "Got the preemption list!!");
-=======
-    public Response greeting(@RequestBody final PreemptionTicket[] pts) {
-=======
-    public Response greeting(@RequestBody final PreemptionTicket pts) {
->>>>>>> shemil
+
         JVirshServiceController controller = new JVirshServiceController();
         Result result = null;
         int sizeCheck=0;
@@ -38,15 +32,15 @@ public class JVirshServiceController {
         }
         //Do whatever with the PreemptionTicket array !!!
         if(sizeCheck==vm_ids.length) {
-            return new Response(200, "Got the preemption list and states saved!!");
+            return new Response(200, pts.getHostIP());
         }else if(sizeCheck==0&&vm_ids.length!=0){
-            return new Response(404, "Got list,but nothing was saved!!  "+result.error_msg);
+            return new Response(404, null);
         }
         else if((sizeCheck<vm_ids.length)&&sizeCheck>0){
-            return new Response(405, "Got the preemption list and states saved of some!! "+result.error_msg);
+            return new Response(405, null);
         }
         else {
-            return new Response(406, "Invalid inputs!!  "+result.error_msg);
+            return new Response(406, null);
         }
     }
 
@@ -111,7 +105,7 @@ public class JVirshServiceController {
 
         return result;
 
->>>>>>> 3203409349e6e1aab84aad613fe82b9a33ed9515
+
     }
 
 }

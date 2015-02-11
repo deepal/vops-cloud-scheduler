@@ -13,7 +13,7 @@ var resSuccess = function(res, msg){
 };
 
 var home = function (req, res) {
-    console.log("Express server got a request");
+    //console.log("Express server got a request");
     resSuccess(res, "Resource scheduler is up and running")
 };
 

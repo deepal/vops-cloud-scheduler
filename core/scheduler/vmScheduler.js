@@ -32,17 +32,14 @@ module.exports = function (zSession) {
                             // results returned from migration scheduler or preemptive scheduler
                             if (!err) {
 
-                                //TODO: remove this
-                                callback(null, selectedHost);
-
-                                //allocateRequest(selectedHost, authorizedRequest, function (err, result) {
-                                //    if(err){
-                                //        callback(err);
-                                //    }
-                                //    else{
-                                //        callback(null, result);
-                                //    }
-                                //});
+                                allocateRequest(selectedHost, authorizedRequest, function (err, resp) {
+                                    if (err) {
+                                        callback(err);
+                                    }
+                                    else {
+                                        callback(null, resp);
+                                    }
+                                });
                             }
                             else {
                                 callback(err);
@@ -235,7 +232,6 @@ module.exports = function (zSession) {
                 callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));        //if error occured in cloudstack, return the error through callback
             }
             else{
-
                 console.log("VM Deploy request is being processed\n" +
                 "\tService offering ID - "+params.serviceOfferingID+"\n" +
                 "\tTemplate ID - "+params.templateID+"\n" +

@@ -3,27 +3,38 @@ module.exports = function(){
     var response = require('../../config/responseMessages');
     var db = require('../db');
     var Allocation = require('../db/schemas/dbAllocation');
-    var restClient = new (require('node-rest-client').Client)();
+    var DBHost = require('../db/schemas/dbHost');
+    var restClient = require('node-rest-client').Client;
+    var client = new restClient();
     var findHostByPreemption = function (authorizedRequest, allPossibleHosts, callback) {
 
         //Get list of hosts in the ascending order of the VM count, get the list sorted
-        Allocation.aggregate([{
-            $group:{
-                _id: "$VM.HostInfo.IPAddr",
-                count: { $sum: 1}
-            }
-        },
+        Allocation.aggregate([
+            {
+                $match: {
+                    'AllocationInfo.Priority': {
+                        $lt: parseInt(authorizedRequest.requestContent.group[0].priority[0])
+                    }
+                }
+            },
+            {
+                $group:{
+                    _id: "$VM.HostInfo.IPAddr",
+                    count: { $sum: 1}
+                }
+            },
             {
                 $sort: { count: 1}
             }
+
         ], function (err, result) {
             if(err){
                 callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
             }
             else{
                 var hostArray = []; //put each host IP in a String array to send to 'chechEachHostForPreemption'
-                for(var i=0;i<result.result.length;i++){
-                    hostArray.push(result.result[i]._id);
+                for(var i=0;i<result.length;i++){
+                    hostArray.push(result[i]._id);
                 }
 
                 checkEachHostForPreemption(0, authorizedRequest, hostArray, function (err, selectedHostIP, preemptableVMs) {
@@ -31,11 +42,39 @@ module.exports = function(){
                         callback(err);
                     }
                     else if(selectedHostIP){    //get the selectedHostIP from the method, and call JVirshService with REST client
-                        restClient.post('localhost:8080/preempt', {
-                            vmIDs: preemptableVMs,
-                            hostIP: selectedHostIP
-                        }, function (resData, rawRes) {
+
+                        var requestParams = {};
+
+                        requestParams.vmIDs = preemptableVMs;
+                        requestParams.hostIP = selectedHostIP;
+
+                        var args = {
+                            data: requestParams,
+                            headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
+                        };
+
+                        var req = client.post('http://10.10.13.63:8080/preempt', args, function (resData, rawRes) {
+                            if(resData.status ==200){
+                                DBHost.findOne({ ipAddress: resData.message }).exec(function (err, host) {
+                                    if(err){
+                                        callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
+                                    }
+                                    else{
+                                        callback(null, host);
+                                    }
+                                });
+                            }
+                            else if(resData.status == 500){
+                                callback(response.error(500, ERROR.INTERNAL_JVIRSH_ERROR, resData.message));
+                            }
+                            else{
+                                callback(response.error(500, ERROR.UNKNOWN_ERROR, null));
+                            }
                             //If all VMs preemtped, shemil will(mmm... he SHOULD !!) send IP of the host back with OK message.
+                        });
+
+                        req.on('error', function (err) {
+                            callback(response.error(500, ERROR.JVIRSH_SERVICE_ERROR, err));
                         });
                     }
                     else{
@@ -100,6 +139,7 @@ module.exports = function(){
 
                     if(freedMemoryBytes> requestingMemoryBytes){
                         suitableForPreemption = true;
+                        break;
                     }
                     else{
                         vmMem = parseInt(allocations[i].VM.Memory);
