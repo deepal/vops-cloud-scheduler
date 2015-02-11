@@ -5,7 +5,7 @@ package virtualops;
  */
 public class PreemptionTicket {
 
-    private String vmID;
+    private String[] vmIDs;
     private String hostIP;
 
 
@@ -13,17 +13,17 @@ public class PreemptionTicket {
 
     }
 
-    public PreemptionTicket(String vmID, String hostIP){
-        this.setVmID(vmID);
+    public PreemptionTicket(String[] vmIDs, String hostIP){
+        this.setVmID(vmIDs);
         this.setHostIP(hostIP);
     }
 
-    public String getVmID() {
-        return vmID;
+    public String[] getVmIDs() {
+        return this.vmIDs;
     }
 
-    public void setVmID(String vmID) {
-        this.vmID = vmID;
+    public void setVmID(String[] vmIDs) {
+        this.vmIDs = vmIDs;
     }
 
     public String getHostIP() {
