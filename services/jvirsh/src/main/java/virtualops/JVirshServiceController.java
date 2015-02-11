@@ -14,7 +14,16 @@ import net.neoremind.sshxcute.task.impl.ExecCommand;
 public class JVirshServiceController {
 
     @RequestMapping(method = RequestMethod.POST)
+<<<<<<< HEAD
     public Response greeting(@RequestBody final PreemptionTicket pts) {
+=======
+<<<<<<< HEAD
+    public Response greeting(@RequestBody final PreemptionTicket pts) {
+        //Do whatever with the PreemptionTicket !!!
+        return  new Response(200, "Got the preemption list!!");
+=======
+    public Response greeting(@RequestBody final PreemptionTicket[] pts) {
+>>>>>>> 698a5c0c1adedc01018ff2a115cff992ec4e8da8
         JVirshServiceController controller = new JVirshServiceController();
         Result result = null;
         int sizeCheck=0;
@@ -102,6 +111,7 @@ public class JVirshServiceController {
 
         return result;
 
+>>>>>>> 3203409349e6e1aab84aad613fe82b9a33ed9515
     }
 
 }

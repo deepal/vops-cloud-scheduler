@@ -19,7 +19,11 @@ public class PreemptionTicket {
     }
 
     public String[] getVmIDs() {
+<<<<<<< HEAD
         return this.vmIDs;
+=======
+        return vmIDs;
+>>>>>>> 698a5c0c1adedc01018ff2a115cff992ec4e8da8
     }
 
     public void setVmID(String[] vmIDs) {
