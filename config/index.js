@@ -7,10 +7,13 @@ ERROR = {
     CLOUDSTACK_ERROR: 'CloudStack Error !',
     IO_ERROR: 'Error in file I/O !',
     HTTP_ERROR: 'Internal HTTP Error !',
-    UNKNOWN_ERROR: 'An Unknown Error occured! May be due to an unknown response from JVirsh Service!',s
+    UNKNOWN_ERROR: 'An Unknown Error occured! May be due to an unknown response from JVirsh Service!',
     NO_RESOURCES_TO_ALLOCATE: 'No enough resource to serve your request at this moment !',
     JVIRSH_SERVICE_ERROR: 'Error communicating with JVirsh Preemption Web Service',
     INTERNAL_JVIRSH_ERROR: 'Internal Error occured in JVirsh',
+    NOT_LOGGED_IN: 'You are not logged in !',
+    REQUEST_PRIORITY_NOT_AUTHORIZED: 'You have no previleges to specify this priority level for the request',
+    SESSION_KEY_MISSING_IN_REQUEST: 'Authentication failed! Session ID is missing in the request',
     CUSTOM_ERROR: function(errText){
         return 'Unidentified Error! Error message : '+errText;
     }

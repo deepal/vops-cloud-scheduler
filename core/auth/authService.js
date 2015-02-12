@@ -125,20 +125,29 @@ module.exports = function(){
                     }
                     else{
                         if(sessionObj){
-                            callback(null, {
-                                session: sessionObj,
-                                requestContent: userRequest
-                            });
+
+                            if(parseInt(sessionObj.userPriority) < parseInt(userRequest.group[0].priority[0])){
+                                callback(response.error(403, ERROR.REQUEST_PRIORITY_NOT_AUTHORIZED));
+                            }
+                            else{
+                                callback(null, {
+                                    session: sessionObj,
+                                    requestContent: userRequest
+                                });
+                            }
+
+
+
                         }
                         else{
-                            callback(response.error(403, "Please login to Smart Cloud Scheduler!", err));
+                            callback(response.error(403, ERROR.NOT_LOGGED_IN, err));
                         }
                     }
                 });
             }
         }
         else{
-            callback(response.error(403, "Please specify your session key in the request!"));
+            callback(response.error(403, ERROR.SESSION_KEY_MISSING_IN_REQUEST));
         }
 
 
