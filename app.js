@@ -29,7 +29,7 @@ var zabbixLoginCallback = function(data, res) {
     }));
 
     app.use(express.static(__dirname + '/core/frontend/public/css'));
-
+    app.use(express.static(__dirname+'/views'));
     app.get('/', routes.home);
 
     app.get('/web', function (req, res) {

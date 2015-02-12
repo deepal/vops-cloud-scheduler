@@ -4,11 +4,14 @@ block content
     meta(http-equiv='Content-Type', content='text/html; charset=utf-8')
     |       
     title Form Page: sampleform
-    script(type='text/javascript',src='jquery-1.11.2.min.js')
-    
+    script(src='jquery-1.11.2.min.js')
+         
+        
+      
+      
         
   body
-    form#sampleform.form-group(formname='resource scheduler', onSubmit='Javascript:postxml()')
+    form#sampleform.form-group(formname='resource scheduler')
       p
         | VM Count: 
         input.form-control(type='text', id='VMCount', maxlength="10")
@@ -16,13 +19,15 @@ block content
       p
         | ISO: 
         input.form-control(type='text', id='ISO')
+        | ID:
+        input.form-control(type='text', id='ISOId')
       |    
       p
         | Number of Cores: 
         input.form-control(type='text', id='NumberofCores')
       |   &#x9; 
       p
-        | Capacity in MHZ: 
+        | Capacity in GHz:
         input.form-control(type='text', id='Capacity')
       |   
       p
@@ -45,25 +50,29 @@ block content
         input.form-control(type='text', id='Priority')
       |      
       p
-        input(type='submit', name='Submit', value='Submit')
+        input(type='submit', name='Submit', value='Submit',id='submitbutton')
     script.
-      function postxml(){
-      var vmcount=(document.getElementById('VMCount').value);
-      var iso=(document.getElementById('ISO').value);
-      var cores=(document.getElementById('NumberofCores').value);
-      var speed= (document.getElementById('Capacity').value);
-      var architecture=(document.getElementById('Architecture').value);
-      var memory = (document.getElementById('Memory').value);
-      var hard= (document.getElementById('Hard Disk').value);
-      var network= (document.getElementById('Network').value);
-      var priority= (document.getElementById('Priority').value);
+        $(document).ready(function(){
+          
+          $('#submitbutton').click(function(){
+            var vmcount=(document.getElementById('VMCount').value);
+            var iso=(document.getElementById('ISO').value);
+            var isoid=(document.getElementById('ISOId').value);
+            var cores=(document.getElementById('NumberofCores').value);
+            var speed= (document.getElementById('Capacity').value);
+            var architecture=(document.getElementById('Architecture').value);
+            var memory = (document.getElementById('Memory').value);
+            var hard= (document.getElementById('Hard Disk').value);
+            var network= (document.getElementById('Network').value);
+            var priority= (document.getElementById('Priority').value);
       
-      var xmlstring='<?xml version="1.0" encoding="UTF-8"?>'
+            var xmlstring='<?xml version="1.0" encoding="UTF-8"?>'
               +'<resource_request>'
               +'<group>'
               +'<vm_count>'+vmcount+'</vm_count>'
               +'<image>'
               +'<type>'+iso+'</type>'
+              +'<id>'+isoid+'</id>'
               +'</image>'
               +'<cpu>'
               +'<cores>'+cores+'</cores>'
@@ -81,16 +90,33 @@ block content
               +'</min_storage>'
               +'<network>'
               +'<min_bandwidth>'+network+'</min_bandwidth>'
-              +'<unit>Mbps</unit>'
+              +'<unit>mbps</unit>'
               +'</network>'
               +'<priority>'+priority+'</priority>'
               +'</group>'
+              +'<session_id>766816aaed013d3a4d072645c6f3714834cd66c3aeee8ef152231976f181e919</session_id>'
               +'</resource_request>';
-      var parser= new DOMParser();
-      xmlDoc = parser.parseFromString(xmlstring, "text/xml");
-      alert(new XMLSerializer().serializeToString(xmlDoc));
-      }
+            //var parser= new DOMParser();
+            //var xmlDoc = parser.parseFromString(xmlstring, "text/xml");
+            //alert(new XMLSerializer().serializeToString(xmlDoc));
+              $.ajax({ type: "POST",
+                        url: "http://localhost:3000/request",
+                        data: xmlstring,
+                        contentType:"text/xml",
+                        dataType: "json",
+                        error: function() { alert("No data found."); },
+                        success: function(res) {
+                            alert("it works");
+                        }
+                 });  
+
+
+
+          })
+          
         
+        }); 
+              
 
     
 
