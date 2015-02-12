@@ -70,8 +70,7 @@ module.exports = function () {
 
         var candidate = findMaxMemHost(hostsInfo, authorizedRequest);
         var askingMemory = unitConverter.convertMemoryAndStorage(authorizedRequest.requestContent.group[0].min_memory[0].size[0],authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
-        //migration allocation array is created from the candidate that has chosen(migrating that VMs)
-        var migrationInfo = [];
+
 
         Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, hostIds) {
             if(err){
@@ -88,12 +87,9 @@ module.exports = function () {
                     }
                     else{
 
-                        //if(result.listvirtualmachineresponse.virtualmachine) {
-                            var vmListResponse = result.listvirtualmachinesresponse.virtualmachine;
-                       // }
-                       // else{
-                          // callback(null, candidate)
-                      //  }
+                        var vmListResponse = result.listvirtualmachinesresponse.virtualmachine;
+
+                        //if there are virtual machines in that host
                         if(vmListResponse) {
 
 
@@ -103,13 +99,23 @@ module.exports = function () {
                                         callback(response.error(500, 'Database Error', err));
                                     }
                                     else {
+                                        //migration allocation array is created from the candidate that has chosen(migrating that VMs)
+                                        var migrationInfo = [];
+                                        var migrations = [];
                                         //if hostsInfo is null, that mean no other host to migrate
-                                        if (hostsInfo != null) {
-                                            if (checkVMMigratability(vmList, hostArray, hostsInfo, migrationInfo)) {
+                                        if (hostsInfo.length >=0) {
+                                            if (checkVMMigratability(vmList, hostArray, hostsInfo, migrations)) {
                                                 //perform migration
-                                                performMigration(migrationInfo, 0, callback);
-                                                //candidate migrated vms and suitable for allocation
-                                                callback(null, candidate);
+                                                performMigration(migrations, 0, function(err, migrationPerformed){
+                                                    //candidate migrated vms and suitable for allocation
+                                                    if(migrationPerformed) {
+                                                        callback(null, candidate);
+                                                        //todo: database update for each VM
+                                                    }
+                                                    else{
+                                                        callback(err);
+                                                    }
+                                                });
                                             }
                                             else {
                                                 findHost(hostsInfo, authorizedRequest, callback);
@@ -123,15 +129,15 @@ module.exports = function () {
                                 });
                             });
                         }
-
+                        //if there are no virtual machines check whether the memory is suffiecient
                         else if(askingMemory <= getValueByZabbixKey(candidate, 'vm.memory.size[available]')){
                             callback(null, candidate);
                         }
-
-                        else if(hostsInfo!= null){
+                        //if both doesn't work call for next hosts
+                        else if(hostsInfo.length>= 0){
                             findHost(hostsInfo, authorizedRequest, callback);
                         }
-
+                        //if nothing works no candidate host is there
                         else{
                             callback(null, null);
                         }
@@ -178,9 +184,8 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vmList, hosts, hostsInfo, migrationInfo) {
+    var checkVMMigratability = function (vmList, hosts, hostsInfo, migrations) {
 
-        var hostIndex =0;
         var vmCount =0;
 
         //Setting up vmList array in to decreasing order of memory
@@ -195,53 +200,25 @@ module.exports = function () {
         hostMemInfo.sort(function(a,b){return b.memory - a.memory});
 
 
-        for (var j=0; j< hostMemInfo.length; j++) {
-                for (var i = 0; i < vmList.length; i++) {
 
+                for (var i = 0; i < vmList.length; i++) {
+                    for (var j=0; j< hostMemInfo.length; j++) {
                     var vmMemory = unitConverter.convertMemoryAndStorage(vmList[i].memory, 'mb', 'b');
 
-
-
-                   // var tempUsedMemory = 0;
-                   // var hostMemory = getValueByZabbixKey(hostsInfo[hostIndex], 'vm.memory.size[available]');
-
-
                     if (vmMemory <= hostMemInfo[j].memory) {
-                       /* if (migrationInfo.length == 0) {
-                            migrationInfo.push({
-                                hostId: vmList[i].hostID,
-                                vmAllocations: []
-                            });
-                            migrationInfo[0].vmAllocations.push(vmList[i]);
 
-                        }
-                        else {
-                            if (containsHostId(vmList[i].hostID, migrationInfo)) {
-                                for (var k = 0; k < migrationInfo.length; k++) {
-                                    if (migrationInfo[k].hostId == vmList[i].hostID) {
-                                        migrationInfo[k].vmAllocations.push(vmList[i]);
-                                        break;
-                                    }
-                                }
-                            }
-                            else {
-
-                                migrationInfo.push({
-                                    hostId: vmList[i].hostID,
-                                    vmAllocations: []
-                                });
-                                migrationInfo[migrationInfo.length - 1].vmAllocations.push(vmList[i]);
-
-                            }
-                        }*/
-                        migrationInfo.push(vmList[i]);
+                        migrations.push({
+                            vmId : vmList[i].vmID,
+                            migrationHostId: hostMemInfo[j].hostId
+                        });
                         //tempUsedMemory = tempUsedMemory + vmMemory;
                         hostMemInfo[j].memory = hostMemInfo[j].memory- vmMemory;
                         vmCount++;
                         if(vmCount==vmList.length){
-                            return true;
+                          return true;
                         }
-                        continue;
+                        //break the loop and consider putting next vm to the host list
+                        break;
 
                     }
                 }
@@ -250,30 +227,25 @@ module.exports = function () {
         return false;
     };
 
-   /* var containsHostId = function(value, attributes){
-        for(var i=0; i< attributes.length; i++){
-            if(value == attributes[i].hostId){
-                return true;
-            }
-        }
-        return false;
-    };*/
 
     var performMigration = function(migrationAllocation, vmIndex,callback){
 
         if(vmIndex >= migrationAllocation.length){
-            callback(null, null);
+            callback(null, true);
         }
         else{
-            cloudstack.execute('migrateVirtualMachine', {virtualmachineid:migrationAllocation[vmIndex].vmID, hostid:migrationAllocation[vmIndex].hostID}, function(err, res){
-                if(!err){
-                    vmIndex++;
-                    performMigration(migrationAllocation, vmIndex, callback);
-                }
-                else{
-                    callback(err);
-                }
+            Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].migrationHostId }).exec(function (err, hostIds) {
+                cloudstack.execute('migrateVirtualMachine', {virtualmachineid:migrationAllocation[vmIndex].vmId, hostid:hostIds.cloudstackID}, function(err, res){
+                    if(!err){
+                        vmIndex++;
+                        performMigration(migrationAllocation, vmIndex, callback);
+                    }
+                    else{
+                        callback(err);
+                    }
+                });
             });
+
         }
 
     };

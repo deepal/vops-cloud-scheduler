@@ -8,16 +8,16 @@ module.exports = function(){
 
         var migrationScheduler = new (require('./migrationScheduler'))();
 
-        //migrationScheduler.findHostByMigration(authorizedRequest, allPossibleHosts, function(error, selectedHost){
-        //
-        //    if(error){
-        //        callback(error);
-        //    }
-        //    else{
-        //        if(selectedHost){
-        //            callback(null, selectedHost);
-        //        }
-        //        else{
+        migrationScheduler.findHostByMigration(authorizedRequest, allPossibleHosts, function(error, selectedHost){
+
+           if(error){
+                callback(error);
+           }
+            else{
+                if(selectedHost){
+                    callback(null, selectedHost);
+                }
+               else{
 
                     var preemptiveScheduler = new (require('./preemptiveScheduler'))();
 
@@ -31,11 +31,11 @@ module.exports = function(){
                         }
                     });
 
-        //        }
-        //
-        //    }
-        //
-        //});
+               }
+
+            }
+
+        });
 
     };
 
