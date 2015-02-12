@@ -51,11 +51,11 @@ module.exports = function(){
                 });
             }
         });
-    }
+    };
 
     return {
         readConfig: readConfig,
         writeConfig: writeConfig
     }
     
-}
+};

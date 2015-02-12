@@ -19,6 +19,10 @@ ERROR = {
     }
 };
 
+SUCCESS = {
+    HOST_REPOPULATED: 'All Hosts repopulated in database !'
+};
+
 //Cloudstack configuration
 
 CLOUDSTACK = {};

@@ -76,7 +76,7 @@ module.exports = function (callback) {
                         else {
                             var cloudstackHostInfo = result.listhostsresponse.host;
                             addHostToDB(0,zabbixHostInfo,cloudstackHostInfo,function(res){
-                                callback(response.success(200, "All hosts repopulated !", res));
+                                callback(response.success(200, SUCCESS.HOST_REPOPULATED, res));
                             });
 
                         }

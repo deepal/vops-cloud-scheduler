@@ -28,7 +28,7 @@ module.exports = function () {
 
     var undeploy = function (keys, callback) {
         if(keys.vmid){
-            destroyVMByID(keys.vmid, function (err, cRes) {
+            destroyVMByID(keys.vmid, function (err, cRes) {     //if VM ID is specified in
                 if(err){
                     callback(err);
                 }

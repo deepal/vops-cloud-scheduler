@@ -149,7 +149,7 @@ var deployVMInHost = function (hostid, callback) {
 
     cloudstack.execute('deployVirtualMachine', {
         response: 'json',
-        serviceofferingid: "0a66a60e-42a7-420b-8352-1e506b782b1b",
+        serviceofferingid: "cd4148a1-e492-4b5d-9665-2061958d84b8",
         templateid:        "33e879c7-0cd6-40d6-803a-e1f03495e4e6",
         zoneid:            "f2b8ec40-938b-4e50-8dc8-7b3514f646c1",
         diskofferingid:    "1c7546f7-1897-4c2e-bbf9-4f9de2507050",
@@ -226,7 +226,11 @@ var queryAsyncJobResultRecurs = function (jobid, callback) {
 
 //deployVM();
 
-deployVMInHost("fd0a9107-27e3-495e-94c8-412c5879611d", function (err, result) {
+//h4    -   f0a10e72-2e17-4d16-bf45-767ba486d4e4
+//h3    -   fd0a9107-27e3-495e-94c8-412c5879611d
+//h2    -   e38f982f-5fd6-4548-898c-de9450447fde
+
+deployVMInHost("e38f982f-5fd6-4548-898c-de9450447fde", function (err, result) {
     var jobID = result.deployvirtualmachineresponse.jobid;
     queryAsyncJobResultRecurs(jobID, function (err, result) {
         if(err){
