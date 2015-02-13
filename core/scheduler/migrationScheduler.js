@@ -282,7 +282,7 @@ module.exports = function () {
     };
 
     var updateDBItem = function(vmIndex, migrationAllocation, callback){
-
+        if(migrationAllocation.length>0){
         Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].hostId }).exec(function (err, vmhost){
             var conditions = {'VM.VMID' : migrationAllocation[vmIndex].vmId};
             var update = {$set:{'VM.HostInfo': vmhost}}
@@ -298,6 +298,10 @@ module.exports = function () {
                 }
             });
         });
+        }
+        else{
+            callback(null);
+        }
     };
 
 
