@@ -69,7 +69,7 @@ module.exports = function () {
     };
 
     var findHost = function(hostsInfo, allPossibleHosts, authorizedRequest, callback){
-
+        if(hostsInfo.length > 0){
         var candidate = findMaxMemHost(hostsInfo, authorizedRequest);
         var askingMemory = unitConverter.convertMemoryAndStorage(authorizedRequest.requestContent.group[0].min_memory[0].size[0],authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
 
@@ -162,18 +162,23 @@ module.exports = function () {
                             });
                         }
                         //if both doesn't work call for next hosts
-                        else if(hostsInfo.length>= 0){
+                        //can't length be 0, to find max host have to have at least one host
+                        else if(hostsInfo.length> 0){
                             findHost(hostsInfo, allPossibleHosts, authorizedRequest, callback);
                         }
                         //if nothing works no candidate host is there
                         else{
                             callback(null, null);
-                        }
+                         }
 
-                    }
-                });
-            }
-        });
+                        }
+                    });
+                }
+            });
+        }
+        else{
+            callback(null, null);
+        }
     };
 
 
@@ -279,7 +284,7 @@ module.exports = function () {
     var updateDBItem = function(vmIndex, migrationAllocation, callback){
 
         Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].hostId }).exec(function (err, vmhost){
-            var conditions = {'VM.VMID' : migrationAllocation[i].vmId};
+            var conditions = {'VM.VMID' : migrationAllocation[vmIndex].vmId};
             var update = {$set:{'VM.HostInfo': vmhost}}
             var options = {upsert: true};
 
