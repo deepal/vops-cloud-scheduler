@@ -102,8 +102,6 @@ module.exports = function () {
 
                         //if there are virtual machines in that host
                         if(vmListResponse) {
-
-
                             getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
                                 Hosts.find({}).exec(function (err, hostArray) {
                                     if (err) {
@@ -115,7 +113,6 @@ module.exports = function () {
                                         var migrations = [];
                                         //if migrationHosts is null, that means no other host to migrate
                                         if (migrationHosts) {
-                                            //todo: needs testing
                                             if (checkVMMigratability(vmList, hostArray, migrationHosts, migrations)) {
                                                 //perform migration
                                                 performMigration(migrations, 0, function(err, migrationPerformed, migrationAllocation){
@@ -124,34 +121,17 @@ module.exports = function () {
                                                         Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, host){
                                                             if(!err){
                                                                 callback(null, host);
+                                                                //todo: database update for each VM(needs testing)
+                                                                updateDBItem(0, migrationAllocation, function(err){
+                                                                    if(err){
+                                                                        callback(err);
+                                                                    }
+                                                                });
                                                             }
                                                             else{
                                                                 callback(err);
                                                             }
                                                         });
-
-                                                        //todo: database update for each VM(needs testing)
-                                                       // var i=0;
-                                                        /*VMAllocations.findOne({'VM.VMID' : migrationAllocation[i].vmId}).exec(function(err, item){
-                                                            var conditions = {'VM.VMID' : migrationAllocation[i].vmId};
-                                                           // var update = {$set:{'VM.HostInfo': }}
-
-
-                                                           /* var conditions = {zabbixItemID: hostStats[statHostIndex].itemInfo[statItemIndex].itemId};
-                                                            var update = {$set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value, last_updated: Date.now()}};
-                                                            var options = {upsert: true};
-
-                                                            EwmaSchema.update(conditions, update, options, function (err) {
-                                                                if (!err) {
-                                                                    statItemIndex++;
-                                                                    updateDBInfoPerItem(statHostIndex, statItemIndex, hostStats, callback);
-                                                                }
-                                                                else {
-                                                                    callback(err);
-                                                                }
-                                                            });
-                                                        });*/
-
                                                     }
                                                     else{
                                                         callback(err);
@@ -170,9 +150,16 @@ module.exports = function () {
                                 });
                             });
                         }
-                        //if there are no virtual machines check whether the memory is suffiecient
+                        //if there are no virtual machines check whether the memory is sufficient
                         else if(askingMemory <= getValueByZabbixKey(candidate, 'vm.memory.size[available]')){
-                            callback(null, candidate);
+                            Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, host){
+                                if(!err){
+                                    callback(null, host);
+                                }
+                                else{
+                                    callback(err);
+                                }
+                            });
                         }
                         //if both doesn't work call for next hosts
                         else if(hostsInfo.length>= 0){
@@ -287,6 +274,25 @@ module.exports = function () {
 
         }
 
+    };
+
+    var updateDBItem = function(vmIndex, migrationAllocation, callback){
+
+        Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].hostId }).exec(function (err, vmhost){
+            var conditions = {'VM.VMID' : migrationAllocation[i].vmId};
+            var update = {$set:{'VM.HostInfo': vmhost}}
+            var options = {upsert: true};
+
+            VMAllocations.update(conditions,update,options,function(err){
+                if(!err){
+                    vmIndex++;
+                    updateDBItem(vmIndex, migrationAllocation, callback);
+                }
+                else{
+                    callback(err);
+                }
+            });
+        });
     };
 
 

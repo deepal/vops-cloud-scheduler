@@ -28,6 +28,7 @@ module.exports = function (resourceRequest) {
         return keys.indexOf(val) > -1;
     };
 
+    //All host information are collected
     var getHostItems = function (zapi, hostIndex, hosts, callback) {
         if (hostIndex >= hosts.length) {
             callback(null, hosts);
@@ -59,6 +60,7 @@ module.exports = function (resourceRequest) {
         }
     };
 
+    //Hosts statistics are monitored
     var fetchHostItemInfo = function (zSession, callback) {
 
         var zapi = new (require('../../zabbix/api'))(zSession);     //create a new object of zabbix module
@@ -98,7 +100,7 @@ module.exports = function (resourceRequest) {
              callback(responseInfo.error(500,"Database Error!", err));
             }
         });
-    }
+    };
 
     var fetchHostStats = function (zSession, callback) {
         fetchHostItemInfo(zSession, function (err, hostInfo) {
@@ -110,8 +112,9 @@ module.exports = function (resourceRequest) {
                 getItemHistory(zapi, hostInfo, 0, callback);
             }
         });
-    }
+    };
 
+    //Histoty items are collected for each item
     var getItemHistory = function (zapi, hostInfo, hostIndex, callback) {
         if (hostIndex >= hostInfo.length) {
             callback(null, hostInfo);
@@ -127,7 +130,7 @@ module.exports = function (resourceRequest) {
                 }
             });
         }
-    }
+    };
 
     var getHistoryPerItem = function (zapi, hostInfo, hostIndex, itemIndex, callback) {
         if (itemIndex >= (hostInfo[hostIndex]).items.length) {
@@ -142,7 +145,7 @@ module.exports = function (resourceRequest) {
                 sortfield: "clock",
                 sortorder: "DESC",
                 limit: 2
-            }
+            };
 
             zapi.exec(ZABBIX.METHODS.history, params, function (data, res) {
 
@@ -167,7 +170,8 @@ module.exports = function (resourceRequest) {
 
             });
         }
-    }
+    };
+
 
     var calculateMovingAverage = function (zSession, callback) {
         fetchHostStats(zSession, function (error, hostInfo) {
@@ -189,6 +193,7 @@ module.exports = function (resourceRequest) {
         });
     };
 
+    //Stat Items and Item info are collected
     var getStatInfoItem = function (hostIndex, hostInfo, config,  callback) {
         if (hostIndex >= hostInfo.length) {
             callback(null, hostInfo, hostStats);
@@ -222,6 +227,7 @@ module.exports = function (resourceRequest) {
                     responseInfo.error(500, "Internal Server Error !", err);
                 }
                 else {
+                    //if an item is available previously
                     if (item) {
                         var average;
                         var values = [];
@@ -246,6 +252,7 @@ module.exports = function (resourceRequest) {
                             value: ewma_new
                         });
                     }
+                    //if an item is not added previously have to add it now
                     else {
                         var average;
                         var values = [];
@@ -271,6 +278,7 @@ module.exports = function (resourceRequest) {
         }
     };
 
+    //updating db items are performed
     var updateDBInfo = function (statHostIndex, hostStats, callback) {
         if (statHostIndex >= hostStats.length) {
             callback(null, hostStats);
@@ -309,6 +317,7 @@ module.exports = function (resourceRequest) {
         }
     };
 
+    //possible hosts fulfilling asking resources are calculated
     var fetchPossibleHosts = function (resourceRequest, hostStats, callback) {
 
         var attrInKeys = function (attr, hostInfo) {
@@ -387,7 +396,6 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-            //console.log("memoryCandidateHosts:"+JSON.stringify(candidateHosts));
 
             //Filtering Hosts with sufficient cores from those who already fulfill memory requirements
             for (var i = 0; i < candidateHosts.length; i++) {
@@ -444,8 +452,9 @@ module.exports = function (resourceRequest) {
                 }
             }
 
+            //possible memory hosts are calculated to perform migration or premption
             var possibleMemoryHosts = [];
-
+            //calculating hosts who have enough total memory
             for (var i = 0; i < hostStats.length; i++) {
                 for (var j = 0; j < hostStats[i].itemInfo.length; j++) {
                     if (hostStats[i].itemInfo[j].itemKey == 'vm.memory.size[total]') {
@@ -475,7 +484,7 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-
+            //calculating hosts who has enough memory and cores
             var hostsWithEnoughCores = [];
             var memoryHostsCopy = _.clone(possibleMemoryHosts);
             var askingCores = parseInt(resourceRequest.cpu[0].cores[0]);
@@ -490,7 +499,7 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-
+            //calculating hosts who has enough memory, cores and cpu frequency
             var hostsWithEnoughFreq = [];
             var coresHostsCopy = _.clone(hostsWithEnoughCores);
             var askingFreq = unitconverter.convertFrequency(parseInt(resourceRequest.cpu[0].frequency[0]), resourceRequest.cpu[0].unit[0], 'hz');
@@ -505,9 +514,6 @@ module.exports = function (resourceRequest) {
                     }
                 }
             }
-
-            //console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
-            //console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
             if(hostsWithEnoughFreq.length > 0){
                 callback(null, candidateHosts, hostsWithEnoughFreq);
             }
