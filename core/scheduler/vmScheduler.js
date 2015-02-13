@@ -13,7 +13,7 @@ module.exports = function (zSession) {
         secretKey: CLOUDSTACK.SECRET_KEY
     });
 
-    //TODO: Pending test
+
     var requestForAllocation = function (jsonAllocRequest, callback) {
 
         authService.authorizeResourceRequest(jsonAllocRequest, function (err, authorizedRequest) {  //Authenticate and authorize incoming request
@@ -25,44 +25,49 @@ module.exports = function (zSession) {
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
                 hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) { //find available resources using host filter
 
-                    if (filteredHostsInfo.length == 0) {        // if there seem to be no space in hosts to allocate the request, call priority scheduler
-                        var priorityScheduler = new (require('./priorityScheduler'))();
-                        /// do whatever you do with priority scheduler
-                        priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
-                            // results returned from migration scheduler or preemptive scheduler
-                            if (!err) {
-
-                                allocateRequest(selectedHost, authorizedRequest, function (err, resp) {
-                                    if (err) {
-                                        callback(err);
-                                    }
-                                    else {
-                                        callback(null, resp);
-                                    }
-                                });
-                            }
-                            else {
-                                callback(err);
-                            }
-                        });
+                    if(err){
+                        callback(err);
                     }
-                    else {
-                        //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
-                        findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {       //find the best host among available to allocate the request
-                            if(err){
-                                callback(err);
-                            }
-                            else{
-                                allocateRequest(bestHost, authorizedRequest, function (err, result) {       //allocate request on the selected host
-                                    if (err) {
-                                        callback(err);
-                                    }
-                                    else {
-                                        callback(null, result);
-                                    }
-                                });
-                            }
-                        });
+                    else{
+                        if (filteredHostsInfo.length == 0) {        // if there seem to be no space in hosts to allocate the request, call priority scheduler
+                            var priorityScheduler = new (require('./priorityScheduler'))();
+                            /// do whatever you do with priority scheduler
+                            priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
+                                // results returned from migration scheduler or preemptive scheduler
+                                if (!err) {
+
+                                    allocateRequest(selectedHost, authorizedRequest, function (err, resp) {
+                                        if (err) {
+                                            callback(err);
+                                        }
+                                        else {
+                                            callback(null, resp);
+                                        }
+                                    });
+                                }
+                                else {
+                                    callback(err);
+                                }
+                            });
+                        }
+                        else {
+                            //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
+                            findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {       //find the best host among available to allocate the request
+                                if(err){
+                                    callback(err);
+                                }
+                                else{
+                                    allocateRequest(bestHost, authorizedRequest, function (err, result) {       //allocate request on the selected host
+                                        if (err) {
+                                            callback(err);
+                                        }
+                                        else {
+                                            callback(null, result);
+                                        }
+                                    });
+                                }
+                            });
+                        }
                     }
                 });
             }
@@ -70,12 +75,10 @@ module.exports = function (zSession) {
     };
 
 
-    //TODO: Pending test
     var requestForDeAllocation = function (jsonDeAllocRequest, callback) {
         //de-allocate resources using cloudstack api and execute callback.
     };
 
-    //TODO: Pending test
     var createServiceOffering = function (authorizedRequest, callback) {
         var requestingMemory = unitConverter.convertMemoryAndStorage(parseInt(authorizedRequest.requestContent.group[0].min_memory[0].size[0]), authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'mb');
         var requestingCores = parseInt(authorizedRequest.requestContent.group[0].cpu[0].cores[0]);
@@ -95,7 +98,7 @@ module.exports = function (zSession) {
         });
     };
 
-    //TODO: Pending test
+
     var createDiskOffering = function (authorizedRequest, callback) {
 
         var type = authorizedRequest.requestContent.group[0].image[0].type[0];
@@ -127,9 +130,6 @@ module.exports = function (zSession) {
 
     };
 
-    var registerVMTemplate = function (authorizedRequest, callback) {
-        //TODO: register a template for VM here
-    };
 
     var deployVM = function (selectedHost, authorizedRequest, serviceOfferingID, diskOfferingID, vmGroupID, allocationID, callback) {
         var hostID = selectedHost.cloudstackID;
@@ -314,7 +314,7 @@ module.exports = function (zSession) {
         });
     };
 
-    //TODO: Pending test
+
     var allocateRequest = function (selectedHost, authorizedRequest, callback) {
         var cloudstack = new (require('csclient'))({
             serverURL: CLOUDSTACK.API,
@@ -368,7 +368,6 @@ module.exports = function (zSession) {
         var getItemValueByKey= utilFunctions.getItemValueByKey;
 
         if (filteredHostsInfo.length == 1) {
-            //TODO: call getDBHostByZabbixId() here
 
             getDBHostByZabbixId(filteredHostsInfo[0].hostId, function (err, dbHost) {   //to query database using zabbix host id
                 if(err){
@@ -417,9 +416,6 @@ module.exports = function (zSession) {
 
     };
 
-    var findBestStorage = function (filteredStorageInfo) {
-        //TODO: find best storage
-    };
 
     return {
         requestForAllocation: requestForAllocation,

@@ -1,5 +1,7 @@
 module.exports = function (resourceRequest) {
 
+    var unitconverter = require('../util/unitConverter')();
+
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
         apiKey: CLOUDSTACK.API_KEY,
@@ -416,7 +418,7 @@ module.exports = function (resourceRequest) {
             //Filtering Hosts who have required CPU frequency
             for (var i = 0; i < candidateHosts.length; i++) {
                 for (var j = 0; j < candidateHosts[i].itemInfo.length; j++) {
-                    if (candidateHosts[i].itemInfo[j].itemKey == 'system.hw.cpu') {
+                    if (candidateHosts[i].itemInfo[j].itemKey == 'system.hw.cpu[0, maxfreq]') {
                         var requestingFrequency = resourceRequest.cpu[0].frequency[0];
                         switch((resourceRequest.cpu[0].unit[0]).toLowerCase()){
                             case 'hz':
@@ -491,11 +493,11 @@ module.exports = function (resourceRequest) {
 
             var hostsWithEnoughFreq = [];
             var coresHostsCopy = _.clone(hostsWithEnoughCores);
-            var askingFreq = parseInt(resourceRequest.cpu[0].frequency[0]);
+            var askingFreq = unitconverter.convertFrequency(parseInt(resourceRequest.cpu[0].frequency[0]), resourceRequest.cpu[0].unit[0], 'hz');
 
             for (var i = 0; i < coresHostsCopy.length; i++) {
                 for (var j = 0; j < coresHostsCopy[i].itemInfo.length; j++) {
-                    if (coresHostsCopy[i].itemInfo[j].itemKey == 'system.cpu.num') {
+                    if (coresHostsCopy[i].itemInfo[j].itemKey == 'system.hw.cpu[0, maxfreq]') {
 
                         if (askingFreq <= coresHostsCopy[i].itemInfo[j].value) {
                             hostsWithEnoughFreq.push(coresHostsCopy[i]);
@@ -506,7 +508,12 @@ module.exports = function (resourceRequest) {
 
             //console.log("possibleMemoryHosts"+ JSON.stringify(possibleMemoryHosts));
             //console.log("candidate Hosts:"+ JSON.stringify(candidateHosts));
-            callback(null, candidateHosts, hostsWithEnoughFreq);
+            if(hostsWithEnoughFreq.length > 0){
+                callback(null, candidateHosts, hostsWithEnoughFreq);
+            }
+            else{
+                callback(responseInfo.error(500, ERROR.NO_RESOURCES_TO_ALLOCATE));
+            }
         });
     };
 
@@ -519,7 +526,12 @@ module.exports = function (resourceRequest) {
             }
             else {
                 fetchPossibleHosts(resourceRequest, hostStats, function (err, filteredCandidateHosts, possibleMemoryHosts) {
-                    callback(null,filteredCandidateHosts, possibleMemoryHosts);
+                    if(err){
+                        callback(err);
+                    }
+                    else{
+                        callback(null,filteredCandidateHosts, possibleMemoryHosts);
+                    }
                 });
             }
         });

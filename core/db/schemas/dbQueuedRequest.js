@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 
 module.exports = mongoose.model('DBQueuedRequest', {
     timeStamp: Date,
-    userID: Number,
+    userSession: Object,
     requestPriority: Number,
     request: Object
 });

@@ -4,6 +4,7 @@ module.exports = function(){
     var db = require('../db');
     var Allocation = require('../db/schemas/dbAllocation');
     var DBHost = require('../db/schemas/dbHost');
+    var DBQueuedRequest = require('../db/schemas/dbQueuedRequest');
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
     var findHostByPreemption = function (authorizedRequest, allPossibleHosts, callback) {
@@ -32,55 +33,77 @@ module.exports = function(){
                 callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
             }
             else{
-                var hostArray = []; //put each host IP in a String array to send to 'chechEachHostForPreemption'
-                for(var i=0;i<result.length;i++){
-                    hostArray.push(result[i]._id);
+                if(result.length ==0){
+                    callback(response.error(200, ERROR.REQUEST_QUEUED));
+
+                    var queuedRequest = new DBQueuedRequest({
+                        timestamp: Date.now(),
+                        userSession: authorizedRequest.session,
+                        requestPriority: authorizedRequest.requestContent.group[0].priority[0],
+                        request: authorizedRequest.requestContent
+                    });
+
+                    queuedRequest.save(function (err) {
+                        if(err){
+                            console.log("[!] Database error occured while saving queued request");
+                        }
+                        else{
+                            console.log("[+] Queued Request Saved In database!");
+                        }
+                    });
+
                 }
-
-                checkEachHostForPreemption(0, authorizedRequest, hostArray, function (err, selectedHostIP, preemptableVMs) {
-                    if(err){
-                        callback(err);
+                else{
+                    var hostArray = []; //put each host IP in a String array to send to 'chechEachHostForPreemption'
+                    for(var i=0;i<result.length;i++){
+                        hostArray.push(result[i]._id);
                     }
-                    else if(selectedHostIP){    //get the selectedHostIP from the method, and call JVirshService with REST client
 
-                        var requestParams = {};
+                    checkEachHostForPreemption(0, authorizedRequest, hostArray, function (err, selectedHostIP, preemptableVMs) {
+                        if(err){
+                            callback(err);
+                        }
+                        else if(selectedHostIP){    //get the selectedHostIP from the method, and call JVirshService with REST client
 
-                        requestParams.vmIDs = preemptableVMs;
-                        requestParams.hostIP = selectedHostIP;
+                            var requestParams = {};
 
-                        var args = {
-                            data: requestParams,
-                            headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
-                        };
+                            requestParams.vmIDs = preemptableVMs;
+                            requestParams.hostIP = selectedHostIP;
 
-                        var req = client.post('http://10.10.13.63:8080/preempt', args, function (resData, rawRes) {
-                            if(resData.status ==200){
-                                DBHost.findOne({ ipAddress: resData.message }).exec(function (err, host) {
-                                    if(err){
-                                        callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
-                                    }
-                                    else{
-                                        callback(null, host);
-                                    }
-                                });
-                            }
-                            else if(resData.status == 500){
-                                callback(response.error(500, ERROR.INTERNAL_JVIRSH_ERROR, resData.message));
-                            }
-                            else{
-                                callback(response.error(500, ERROR.UNKNOWN_ERROR, null));
-                            }
-                            //If all VMs preemtped, shemil will(mmm... he SHOULD !!) send IP of the host back with OK message.
-                        });
+                            var args = {
+                                data: requestParams,
+                                headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
+                            };
 
-                        req.on('error', function (err) {
-                            callback(response.error(500, ERROR.JVIRSH_SERVICE_ERROR, err));
-                        });
-                    }
-                    else{
-                        callback(null);
-                    }
-                });
+                            var req = client.post('http://10.8.108.156:8080/preempt', args, function (resData, rawRes) {
+                                if(resData.status ==200){
+                                    DBHost.findOne({ ipAddress: resData.message }).exec(function (err, host) {
+                                        if(err){
+                                            callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
+                                        }
+                                        else{
+                                            callback(null, host);
+                                        }
+                                    });
+                                }
+                                else if(resData.status == 500){
+                                    callback(response.error(500, ERROR.INTERNAL_JVIRSH_ERROR, resData.message));
+                                }
+                                else{
+                                    callback(response.error(500, ERROR.UNKNOWN_ERROR, null));
+                                }
+                                //If all VMs preemtped, shemil will(mmm... he SHOULD !!) send IP of the host back with OK message.
+                            });
+
+                            req.on('error', function (err) {
+                                callback(response.error(500, ERROR.JVIRSH_SERVICE_ERROR, err));
+                            });
+                        }
+                        else{
+                            callback(null);
+                        }
+                    });
+                }
 
             }
         });
