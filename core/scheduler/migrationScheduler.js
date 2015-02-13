@@ -282,10 +282,10 @@ module.exports = function () {
     };
 
     var updateDBItem = function(vmIndex, migrationAllocation, callback){
-        if(migrationAllocation.length>0){
+        if(vmIndex<migrationAllocation.length){
         Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].hostId }).exec(function (err, vmhost){
             var conditions = {'VM.VMID' : migrationAllocation[vmIndex].vmId};
-            var update = {$set:{'VM.HostInfo': vmhost}}
+            var update = {$set:{'VM.HostInfo': vmhost}};
             var options = {upsert: true};
 
             VMAllocations.update(conditions,update,options,function(err){
@@ -295,9 +295,9 @@ module.exports = function () {
                 }
                 else{
                     callback(err);
-                }
-            });
-        });
+                    }
+                });
+             });
         }
         else{
             callback(null);
