@@ -2,6 +2,7 @@ module.exports = function () {
 
     var db = require('../db');
     var Hosts = require('../db/schemas/dbHost');
+    var VMAllocations = require('../db/schemas/dbAllocation');
     var unitConverter = require('../util/unitConverter')();
     var _ = require('underscore');
     var cloudstack = new (require('csclient'))({
@@ -56,7 +57,8 @@ module.exports = function () {
     var findHostByMigration = function (authorizedRequest, allPossibleHosts, callback) {
 
         var hostsInfo = _.clone(allPossibleHosts);
-        findHost(hostsInfo, authorizedRequest, function(err, candidateHost){
+
+        findHost(hostsInfo, allPossibleHosts, authorizedRequest, function(err, candidateHost){
             if(!err){
                 callback(null, candidateHost);
             }
@@ -66,10 +68,19 @@ module.exports = function () {
         });
     };
 
-    var findHost = function(hostsInfo, authorizedRequest, callback){
+    var findHost = function(hostsInfo, allPossibleHosts, authorizedRequest, callback){
 
         var candidate = findMaxMemHost(hostsInfo, authorizedRequest);
         var askingMemory = unitConverter.convertMemoryAndStorage(authorizedRequest.requestContent.group[0].min_memory[0].size[0],authorizedRequest.requestContent.group[0].min_memory[0].unit[0], 'b');
+
+        var migrationHosts =[];
+
+        //todo:needs testing
+        for(var i=0; i< allPossibleHosts.length; i++){
+            if(allPossibleHosts[i]!=candidate){
+                migrationHosts.push(allPossibleHosts[i]);
+            }
+        }
 
 
         Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, hostIds) {
@@ -100,17 +111,47 @@ module.exports = function () {
                                     }
                                     else {
                                         //migration allocation array is created from the candidate that has chosen(migrating that VMs)
-                                        var migrationInfo = [];
+
                                         var migrations = [];
-                                        //if hostsInfo is null, that mean no other host to migrate
-                                        if (hostsInfo.length >=0) {
-                                            if (checkVMMigratability(vmList, hostArray, hostsInfo, migrations)) {
+                                        //if migrationHosts is null, that means no other host to migrate
+                                        if (migrationHosts) {
+                                            //todo: needs testing
+                                            if (checkVMMigratability(vmList, hostArray, migrationHosts, migrations)) {
                                                 //perform migration
-                                                performMigration(migrations, 0, function(err, migrationPerformed){
+                                                performMigration(migrations, 0, function(err, migrationPerformed, migrationAllocation){
                                                     //candidate migrated vms and suitable for allocation
                                                     if(migrationPerformed) {
-                                                        callback(null, candidate);
-                                                        //todo: database update for each VM
+                                                        Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, host){
+                                                            if(!err){
+                                                                callback(null, host);
+                                                            }
+                                                            else{
+                                                                callback(err);
+                                                            }
+                                                        });
+
+                                                        //todo: database update for each VM(needs testing)
+                                                       // var i=0;
+                                                        /*VMAllocations.findOne({'VM.VMID' : migrationAllocation[i].vmId}).exec(function(err, item){
+                                                            var conditions = {'VM.VMID' : migrationAllocation[i].vmId};
+                                                           // var update = {$set:{'VM.HostInfo': }}
+
+
+                                                           /* var conditions = {zabbixItemID: hostStats[statHostIndex].itemInfo[statItemIndex].itemId};
+                                                            var update = {$set: {ewma_last: hostStats[statHostIndex].itemInfo[statItemIndex].value, last_updated: Date.now()}};
+                                                            var options = {upsert: true};
+
+                                                            EwmaSchema.update(conditions, update, options, function (err) {
+                                                                if (!err) {
+                                                                    statItemIndex++;
+                                                                    updateDBInfoPerItem(statHostIndex, statItemIndex, hostStats, callback);
+                                                                }
+                                                                else {
+                                                                    callback(err);
+                                                                }
+                                                            });
+                                                        });*/
+
                                                     }
                                                     else{
                                                         callback(err);
@@ -118,7 +159,7 @@ module.exports = function () {
                                                 });
                                             }
                                             else {
-                                                findHost(hostsInfo, authorizedRequest, callback);
+                                                findHost(hostsInfo, allPossibleHosts, authorizedRequest, callback);
                                             }
                                         }
                                         else {
@@ -135,7 +176,7 @@ module.exports = function () {
                         }
                         //if both doesn't work call for next hosts
                         else if(hostsInfo.length>= 0){
-                            findHost(hostsInfo, authorizedRequest, callback);
+                            findHost(hostsInfo, allPossibleHosts, authorizedRequest, callback);
                         }
                         //if nothing works no candidate host is there
                         else{
@@ -184,7 +225,7 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vmList, hosts, hostsInfo, migrations) {
+    var checkVMMigratability = function (vmList, hosts, migrationHosts, migrations) {
 
         var vmCount =0;
 
@@ -192,14 +233,12 @@ module.exports = function () {
        vmList.sort(function(a,b){return b.memory - a.memory});
 
         var hostMemInfo = [];
-        for(var i=0; i< hostsInfo.length; i++){
-            var hostMemory = getValueByZabbixKey(hostsInfo[i], 'vm.memory.size[available]');
-            hostMemInfo.push({hostId: hostsInfo[i].hostId,
+        for(var i=0; i< migrationHosts.length; i++){
+            var hostMemory = getValueByZabbixKey(migrationHosts[i], 'vm.memory.size[available]');
+            hostMemInfo.push({hostId: migrationHosts[i].hostId,
                                 memory: hostMemory});
         }
         hostMemInfo.sort(function(a,b){return b.memory - a.memory});
-
-
 
                 for (var i = 0; i < vmList.length; i++) {
                     for (var j=0; j< hostMemInfo.length; j++) {
@@ -231,7 +270,7 @@ module.exports = function () {
     var performMigration = function(migrationAllocation, vmIndex,callback){
 
         if(vmIndex >= migrationAllocation.length){
-            callback(null, true);
+            callback(null, true, migrationAllocation);
         }
         else{
             Hosts.findOne({ zabbixID: migrationAllocation[vmIndex].migrationHostId }).exec(function (err, hostIds) {
