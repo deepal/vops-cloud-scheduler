@@ -1,0 +1,38 @@
+package virtualops;
+
+/**
+ * Created by shemil on 2/2/15.
+ */
+public class PreemptionTicket {     //request details
+
+    private String[] vmIDs;         //array os vm name ids as strings
+    private String hostIP;
+
+
+    public PreemptionTicket(){
+
+    }
+
+    public PreemptionTicket(String[] vmIDs, String hostIP){  //set
+        this.setVmID(vmIDs);
+        this.setHostIP(hostIP);
+    }
+
+    public String[] getVmIDs() {
+
+        return this.vmIDs;
+
+    }
+
+    public void setVmID(String[] vmIDs) {
+        this.vmIDs = vmIDs;
+    }
+
+    public String getHostIP() {
+        return hostIP;
+    }
+
+    public void setHostIP(String hostIP) {
+        this.hostIP = hostIP;
+    }
+}
