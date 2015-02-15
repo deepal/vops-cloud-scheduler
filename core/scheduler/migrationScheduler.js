@@ -113,7 +113,7 @@ module.exports = function () {
                                         var migrations = [];
                                         //if migrationHosts is null, that means no other host to migrate
                                         if (migrationHosts) {
-                                            if (checkVMMigratability(vmList, hostArray, migrationHosts, migrations)) {
+                                            if (checkVMMigratability(vmList, hostArray, migrationHosts, _.clone(candidate), askingMemory, migrations)) {
                                                 //perform migration
                                                 performMigration(migrations, 0, function(err, migrationPerformed, migrationAllocation){
                                                     //candidate migrated vms and suitable for allocation
@@ -217,11 +217,9 @@ module.exports = function () {
 
 
     //TODO: Needs testing
-    var checkVMMigratability = function (vmList, hosts, migrationHosts, migrations) {
+    var checkVMMigratability = function (vmList, hosts, migrationHosts, candidate, askingMemory, migrations) {
 
-        var vmCount =0;
-
-        //Setting up vmList array in to decreasing order of memory
+       //Setting up vmList array in to decreasing order of memory
        vmList.sort(function(a,b){return b.memory - a.memory});
 
         var hostMemInfo = [];
@@ -230,6 +228,9 @@ module.exports = function () {
             hostMemInfo.push({hostId: migrationHosts[i].hostId,
                                 memory: hostMemory});
         }
+
+        var candidateMem = getValueByZabbixKey(candidate, 'vm.memory.size[available]');
+
         hostMemInfo.sort(function(a,b){return b.memory - a.memory});
 
                 for (var i = 0; i < vmList.length; i++) {
@@ -244,8 +245,8 @@ module.exports = function () {
                         });
                         //tempUsedMemory = tempUsedMemory + vmMemory;
                         hostMemInfo[j].memory = hostMemInfo[j].memory- vmMemory;
-                        vmCount++;
-                        if(vmCount==vmList.length){
+                        candidateMem = candidateMem + vmMemory;
+                        if(candidateMem >=askingMemory){
                           return true;
                         }
                         //break the loop and consider putting next vm to the host list
