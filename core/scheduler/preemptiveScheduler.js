@@ -5,6 +5,7 @@ module.exports = function(){
     var Allocation = require('../db/schemas/dbAllocation');
     var DBHost = require('../db/schemas/dbHost');
     var DBQueuedRequest = require('../db/schemas/dbQueuedRequest');
+    var DBPreemptedJob = require('../db/schemas/dbpreemptedJob');
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
     var findHostByPreemption = function (authorizedRequest, allPossibleHosts, callback) {
@@ -75,7 +76,9 @@ module.exports = function(){
                                 headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
                             };
 
-                            var req = client.post('http://10.8.108.156:8080/preempt', args, function (resData, rawRes) {
+                            console.log('[...] Trying to preempt Virtual machines [ '+ requestParams.vmIDs+" ]");
+
+                            var req = client.post(SERVICES.PREEMPTION_SERVICE_URL, args, function (resData, rawRes) {
                                 if(resData.status ==200){
                                     DBHost.findOne({ ipAddress: resData.message }).exec(function (err, host) {
                                         if(err){
@@ -83,6 +86,12 @@ module.exports = function(){
                                         }
                                         else{
                                             callback(null, host);
+
+                                            savePreemptedVMsInDB(0, authorizedRequest, requestParams.vmIDs, function (err) {
+                                                if(!err){
+                                                    console.log('[+] Preempted request saved in database!');
+                                                }
+                                            });
                                         }
                                     });
                                 }
@@ -111,6 +120,39 @@ module.exports = function(){
 
     };
 
+    var savePreemptedVMsInDB = function (index, authorizedRequest, vmIDs, callback) {
+        if(index >= vmIDs.length){
+            callback(null);
+        }
+        else{
+
+            var preemptedJob = new DBPreemptedJob({
+                jobPriority: authorizedRequest.requestContent.group[0].priority[0],
+                preemptionTimestamp: Date.now(),
+                jobContent: authorizedRequest.requestContent
+            });
+
+            preemptedJob.save(function (err) {
+                if(err){
+                    console.log("[-] Error occured when saving preempted request in database! ");
+                }
+                else{
+                    Allocation.remove({
+                        'VM.InstanceName': vmIDs[index]
+                    }, function (err) {
+                        if(err){
+                            console.log('[-] Error removing allocation from database ! ');
+                        }
+                        else{
+                            index++;
+                            savePreemptedVMsInDB(index, authorizedRequest, vmIDs, callback);
+                        }
+                    });
+                }
+            });
+        }
+    };
+
     var getPreemptableAllocationsStrategy = function (findStrategy, sortStrategy, callback) {   // Implements a VM search strategy
         Allocation.find(findStrategy).sort(sortStrategy).exec(function (err, allocations) {
             if(err){
@@ -137,7 +179,24 @@ module.exports = function(){
     var checkEachHostForPreemption = function(index, authorizedRequest, allDBHostIPs, callback){
 
         if(index >= allDBHostIPs.length){
-            callback(null);
+            callback(response.error(200, ERROR.REQUEST_QUEUED));    //if there is no suitable host for the request, queue request and return message
+
+            var highPriorityQueuedAlloc = new DBQueuedRequest({
+                timestamp: Date.now(),
+                userSession: authorizedRequest.session,
+                requestPriority: authorizedRequest.requestContent.group[0].priority[0],
+                request: authorizedRequest.requestContent
+            });
+
+            highPriorityQueuedAlloc.save(function (err) {
+                if(err){
+                    console.log("[!] Error occured saving request in database ! Error info: "+JSON.stringify(err));
+                }
+                else{
+                    console.log("[!]  Queued Request Saved In database! ");
+                }
+            });
+
         }
         else{
             var selectedHostIP = allDBHostIPs[index];

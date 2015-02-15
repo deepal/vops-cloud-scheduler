@@ -1,11 +1,11 @@
 package virtualops;
 
 /**
- * Created by deepal on 2/9/15.
+ * Created by virtualops on 2/2/15.
  */
-public class PreemptionTicket {
+public class PreemptionTicket {     //request details
 
-    private String[] vmIDs;
+    private String[] vmIDs;         //array os vm name ids as strings
     private String hostIP;
 
 
@@ -13,7 +13,7 @@ public class PreemptionTicket {
 
     }
 
-    public PreemptionTicket(String[] vmIDs, String hostIP){
+    public PreemptionTicket(String[] vmIDs, String hostIP){  //set
         this.setVmID(vmIDs);
         this.setHostIP(hostIP);
     }

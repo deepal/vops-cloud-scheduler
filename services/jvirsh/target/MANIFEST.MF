@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
-Built-By: SCORPIO
+Build-Jdk: 1.7.0_65
+Built-By: deepal
 Created-By: IntelliJ IDEA
-Build-Jdk: 1.8.0_31
 Main-Class: ${start-class}
 

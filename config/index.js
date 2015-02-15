@@ -2,6 +2,10 @@
 //Resource Scheduler Configuration
 LISTEN_PORT = 3000;
 HYPERVISOR = 'kvm';
+SERVICES = {
+    PREEMPTION_SERVICE_URL: 'http://localhost:8080/preempt'
+};
+
 ERROR = {
     DB_CONNECTION_ERROR : 'Database Error !',
     CLOUDSTACK_ERROR: 'CloudStack Error !',

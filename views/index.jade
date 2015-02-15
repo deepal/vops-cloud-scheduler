@@ -35,7 +35,7 @@ block content
         input.form-control(type='text', id='Architecture')
       |   
       p
-        | Memory in GB: 
+        | Memory in MB:
         input.form-control(type='text', id='Memory')
       |   
       p
@@ -54,7 +54,8 @@ block content
     script.
         $(document).ready(function(){
           
-          $('#submitbutton').click(function(){
+          $('#submitbutton').click(function(e){
+              e.preventDefault();
             var vmcount=(document.getElementById('VMCount').value);
             var iso=(document.getElementById('ISO').value);
             var isoid=(document.getElementById('ISOId').value);
@@ -82,7 +83,7 @@ block content
               +'</cpu>'
               +'<min_memory>'
               +'<size>'+memory+'</size>'
-              +'<unit>GB</unit>'
+              +'<unit>MB</unit>'
               +'</min_memory>'
               +'<min_storage>'
               +'<primary>'+hard+'</primary>'

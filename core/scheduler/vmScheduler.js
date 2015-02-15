@@ -31,6 +31,7 @@ module.exports = function (zSession) {
                     else{
                         if (filteredHostsInfo.length == 0) {        // if there seem to be no space in hosts to allocate the request, call priority scheduler
                             var priorityScheduler = new (require('./priorityScheduler'))();
+
                             /// do whatever you do with priority scheduler
                             priorityScheduler.scheduleRequest(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
                                 // results returned from migration scheduler or preemptive scheduler
@@ -51,6 +52,7 @@ module.exports = function (zSession) {
                             });
                         }
                         else {
+                            console.log('[+] Resources available for current request. Scheduling directly ...');
                             //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
                             findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {       //find the best host among available to allocate the request
                                 if(err){
@@ -245,6 +247,8 @@ module.exports = function (zSession) {
 
                 var jobID = res.deployvirtualmachineresponse.jobid;     // get the Asynchronous JobID of VM deploy. Job ID required to get the deployed VM's ID using queryAsyncJobResult API Method
 
+                console.log("[...] Waiting for VM deployment to complete ...");
+
                 queryAsyncJobResultRecurs(jobID, function (err, res) {
                     // queryAsyncJobResult method recursively check whether VM deployment is complete and if complete,
                     // get the jobresult object and collect information about the VM including id, memory, cpucores, cpufreq etc.
@@ -297,9 +301,10 @@ module.exports = function (zSession) {
                                     allocation.save(function (err) {        //save allocation in database
                                         if (err) {
                                             console.log("Error saving allocation in the database\nError Info: "+err);
+                                            console.log('==============================================================');
                                         }
                                         else {
-                                            console.log("Allocation saved in database !");
+                                            console.log("Allocation saved in database !\n======================================================================");
                                         }
                                     });
                                 }
