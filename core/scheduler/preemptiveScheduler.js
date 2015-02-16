@@ -8,6 +8,8 @@ module.exports = function(){
     var DBPreemptedJob = require('../db/schemas/dbpreemptedJob');
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
     var findHostByPreemption = function (authorizedRequest, allPossibleHosts, callback) {
 
         //Get list of hosts in the ascending order of the VM count, get the list sorted
@@ -46,10 +48,10 @@ module.exports = function(){
 
                     queuedRequest.save(function (err) {
                         if(err){
-                            console.log("[!] Database error occured while saving queued request");
+                            logger.error("Database error occured while saving queued request");
                         }
                         else{
-                            console.log("[+] Queued Request Saved In database!");
+                            logger.info("Queued Request Saved In database!");
                         }
                     });
 
@@ -76,7 +78,7 @@ module.exports = function(){
                                 headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
                             };
 
-                            console.log('[...] Trying to preempt Virtual machines [ '+ requestParams.vmIDs+" ]");
+                            logger.info('Trying to preempt Virtual machines [ '+ requestParams.vmIDs+' ]');
 
                             var req = client.post(SERVICES.PREEMPTION_SERVICE_URL, args, function (resData, rawRes) {
                                 if(resData.status ==200){
@@ -89,22 +91,25 @@ module.exports = function(){
 
                                             savePreemptedVMsInDB(0, authorizedRequest, requestParams.vmIDs, function (err) {
                                                 if(!err){
-                                                    console.log('[+] Preempted request saved in database!');
+                                                    logger.info('Preempted request saved in database!');
                                                 }
                                             });
                                         }
                                     });
                                 }
                                 else if(resData.status == 500){
+                                    logger.error(ERROR.INTERNAL_JVIRSH_ERROR);
                                     callback(response.error(500, ERROR.INTERNAL_JVIRSH_ERROR, resData.message));
                                 }
                                 else{
+                                    logger.error(ERROR.UNKNOWN_ERROR);
                                     callback(response.error(500, ERROR.UNKNOWN_ERROR, null));
                                 }
                                 //If all VMs preemtped, shemil will(mmm... he SHOULD !!) send IP of the host back with OK message.
                             });
 
                             req.on('error', function (err) {
+                                logger.error(ERROR.JVIRSH_SERVICE_ERROR+". ERR: "+JSON.stringify(err));
                                 callback(response.error(500, ERROR.JVIRSH_SERVICE_ERROR, err));
                             });
                         }
@@ -134,14 +139,14 @@ module.exports = function(){
 
             preemptedJob.save(function (err) {
                 if(err){
-                    console.log("[-] Error occured when saving preempted request in database! ");
+                    logger.error("Error occured when saving preempted request in database! ");
                 }
                 else{
                     Allocation.remove({
                         'VM.InstanceName': vmIDs[index]
                     }, function (err) {
                         if(err){
-                            console.log('[-] Error removing allocation from database ! ');
+                            logger.error('Error removing allocation from database ! ');
                         }
                         else{
                             index++;
@@ -190,10 +195,10 @@ module.exports = function(){
 
             highPriorityQueuedAlloc.save(function (err) {
                 if(err){
-                    console.log("[!] Error occured saving request in database ! Error info: "+JSON.stringify(err));
+                    logger.error("Error occured saving request in database ! Error info: "+JSON.stringify(err));
                 }
                 else{
-                    console.log("[!]  Queued Request Saved In database! ");
+                    logger.error("Queued Request Saved In database! ");
                 }
             });
 
@@ -219,7 +224,7 @@ module.exports = function(){
 
                 for(var i=0;i<allocations.length;i++){
 
-                    if(freedMemoryBytes> requestingMemoryBytes){
+                    if(freedMemoryBytes >= requestingMemoryBytes){
                         suitableForPreemption = true;
                         break;
                     }

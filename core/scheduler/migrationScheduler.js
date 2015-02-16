@@ -5,6 +5,8 @@ module.exports = function () {
     var VMAllocations = require('../db/schemas/dbAllocation');
     var unitConverter = require('../util/unitConverter')();
     var _ = require('underscore');
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
         apiKey: CLOUDSTACK.API_KEY,
@@ -85,7 +87,8 @@ module.exports = function () {
 
         Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, hostIds) {
             if(err){
-                callback(response.error(500, "Database error!", err));
+                logger.error(ERROR.DB_CONNECTION_ERROR);
+                callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
             }
             else{
 
@@ -94,7 +97,8 @@ module.exports = function () {
                 cloudstack.execute('listVirtualMachines', { hostid: hostIds.cloudstackID }, function(err, result){
 
                     if(err){
-                        callback(response.error(500, 'Cloudstack Error!', err));
+                        logger.error(ERROR.CLOUDSTACK_ERROR);
+                        callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                     }
                     else{
 
@@ -105,7 +109,8 @@ module.exports = function () {
                             getVMSpecs(0, vmListResponse, vmList, function (err, vmList) {
                                 Hosts.find({}).exec(function (err, hostArray) {
                                     if (err) {
-                                        callback(response.error(500, 'Database Error', err));
+                                        logger.error(ERROR.DB_CONNECTION_ERROR);
+                                        callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                                     }
                                     else {
                                         //migration allocation array is created from the candidate that has chosen(migrating that VMs)
@@ -193,7 +198,8 @@ module.exports = function () {
 
             cloudstack.execute('listServiceOfferings', {id: serviceOfferingId}, function (err, result) {
                 if (err) {
-                    callback(response.error(500, 'Cloudstack Error!', err));
+                    logger.error(ERROR.CLOUDSTACK_ERROR);
+                    callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                 }
                 else {
                     var serviceOffering = result.listserviceofferingsresponse.serviceoffering[0];

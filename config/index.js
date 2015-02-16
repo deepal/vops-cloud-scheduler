@@ -1,4 +1,5 @@
 
+APP_NAME = "Smart Cloud Scheduler";
 //Resource Scheduler Configuration
 LISTEN_PORT = 3000;
 HYPERVISOR = 'kvm';

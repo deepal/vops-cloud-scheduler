@@ -1,5 +1,6 @@
 module.exports = function(){
-
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
     var scheduleRequest = function(authorizedRequest, allPossibleHosts, callback){
 
         var Allocations = require('../db/schemas/dbAllocation');
@@ -9,7 +10,7 @@ module.exports = function(){
         var migrationScheduler = new (require('./migrationScheduler'))();
 
         if(allPossibleHosts.length > 0){
-            console.log('[+] Waiting for migration scheduling ...');
+            logger.info('Waiting for migration scheduling ...');
             migrationScheduler.findHostByMigration(authorizedRequest, allPossibleHosts, function(error, selectedHost){
 
                if(error){
@@ -22,7 +23,7 @@ module.exports = function(){
                    else{
 
                         var preemptiveScheduler = new (require('./preemptiveScheduler'))();
-                        console.log('[+] Waiting for preemption scheduling ...');
+                        logger.info('Waiting for preemption scheduling ...')
                         preemptiveScheduler.findHostByPreemption(authorizedRequest, allPossibleHosts, function (err, selectedHost) {
                             if(!err){
                                 callback(null, selectedHost);

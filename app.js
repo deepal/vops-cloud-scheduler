@@ -3,7 +3,8 @@ var bodyParser = require('body-parser');
 var xmlParser = require('express-xml-bodyparser');
 var zabbixLogin = new(require("./zabbix/login"))(1);
 var routes = require('./core/frontend/routes/routefunctions');  //this module includes all the functions which gets executed in http request
-
+var bunyan = require('bunyan');
+var logger = bunyan.createLogger({name: APP_NAME});
 var pubDir = './core/frontend/public';
 var viewDir = './core/frontend/views';
 
@@ -56,10 +57,10 @@ var zabbixLoginCallback = function(data, res) {
 
     if(sessID){
         app.listen(LISTEN_PORT);
-        console.log("Resource scheduler is listening on port "+LISTEN_PORT+"...");
+        logger.info("Resource scheduler is listening on port "+LISTEN_PORT+"...");
     }
     else{
-        console.log("Zabbix Server login error! Check Zabbix connection and credentials.");
+        logger.error("Zabbix Server login error! Check Zabbix connection and credentials.");
     }
 
 };

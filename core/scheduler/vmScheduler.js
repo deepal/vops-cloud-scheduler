@@ -6,6 +6,8 @@ module.exports = function (zSession) {
     var response = require('../../config/responseMessages');
     var unitConverter = require('../../core/util/unitConverter')();
     var cloudstackUtils = require('../util/cloudstackUtils')();
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
 
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
@@ -21,7 +23,6 @@ module.exports = function (zSession) {
                 callback(err);
             }
             else {
-                //console.log(JSON.stringify(authorizedRequest));
                 var hostFilter = new (require('./hostFilter'))(authorizedRequest.requestContent);
                 hostFilter.fetchCloudInfo(zSession, function (err, filteredHostsInfo, allPossibleHosts) { //find available resources using host filter
 
@@ -52,8 +53,7 @@ module.exports = function (zSession) {
                             });
                         }
                         else {
-                            console.log('[+] Resources available for current request. Scheduling directly ...');
-                            //console.log("Selected Host: " + JSON.stringify(filteredHostsInfo[0]));
+                            logger.info('Resources are available for the request. Scheduling directly ...');
                             findBestHost(filteredHostsInfo, authorizedRequest, function (err, bestHost) {       //find the best host among available to allocate the request
                                 if(err){
                                     callback(err);
@@ -116,6 +116,7 @@ module.exports = function (zSession) {
                 storagetype: 'shared'
             }, function (err, res) {
                 if(err){
+                    logger.error(ERROR.CLOUDSTACK_ERROR);
                     callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                 }
                 else{
@@ -127,6 +128,7 @@ module.exports = function (zSession) {
             callback(null);
         }
         else{
+            logger.error(ERROR.CUSTOM_ERROR("Unsupported image format!"));
             callback(response.error(200, ERROR.CUSTOM_ERROR("Unsupported image format!"), null));
         }
 
@@ -140,6 +142,7 @@ module.exports = function (zSession) {
         //list all available zones, take the first zone's id and deploy vm there (zoneid is required when deploying a VM)
         cloudstack.execute('listZones', {available: true}, function (err, result) {     //list available zones to allocate VM
             if(err){
+                logger.error(ERROR.CLOUDSTACK_ERROR);
                 callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
             }
             else{
@@ -172,6 +175,7 @@ module.exports = function (zSession) {
                 else{
                     cloudstack.execute('createInstanceGroup', {}, function (err, res) {     //if no group specified, create a group, this is specially for the first VM of a group
                         if(err){
+                            logger.error(ERROR.CLOUDSTACK_ERROR);
                             callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
                         }
                         else{
@@ -231,33 +235,35 @@ module.exports = function (zSession) {
             hypervisor: HYPERVISOR
         }, function (err, res) {
             if(err){
+                logger.error(ERROR.CLOUDSTACK_ERROR);
                 callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));        //if error occured in cloudstack, return the error through callback
             }
             else{
-                console.log("VM Deploy request is being processed\n" +
-                "\tService offering ID - "+params.serviceOfferingID+"\n" +
-                "\tTemplate ID - "+params.templateID+"\n" +
-                "\tDisk Offering ID - "+params.diskOfferingID+"\n" +
-                "\tZone ID - "+params.zoneID+"\n" +
-                "\tVM Group ID - "+params.vmGroupID+"\n" +
-                "\tHost ID - "+params.hostID+"\n" +
-                "\tHypervisor - "+HYPERVISOR);
+                logger.info('VM Deployment on host '+params.hostID+' in progress ...');
+                //console.log("VM Deploy request is being processed\n" +
+                //"\tService offering ID - "+params.serviceOfferingID+"\n" +
+                //"\tTemplate ID - "+params.templateID+"\n" +
+                //"\tDisk Offering ID - "+params.diskOfferingID+"\n" +
+                //"\tZone ID - "+params.zoneID+"\n" +
+                //"\tVM Group ID - "+params.vmGroupID+"\n" +
+                //"\tHost ID - "+params.hostID+"\n" +
+                //"\tHypervisor - "+HYPERVISOR);
 
                 callback(null, res);
 
                 var jobID = res.deployvirtualmachineresponse.jobid;     // get the Asynchronous JobID of VM deploy. Job ID required to get the deployed VM's ID using queryAsyncJobResult API Method
 
-                console.log("[...] Waiting for VM deployment to complete ...");
+                logger.info('Waiting for VM deployment to complete...');
 
                 queryAsyncJobResultRecurs(jobID, function (err, res) {
                     // queryAsyncJobResult method recursively check whether VM deployment is complete and if complete,
                     // get the jobresult object and collect information about the VM including id, memory, cpucores, cpufreq etc.
                     if(err){
-                        console.log("Error occured while calling queryAsyncJobResult !\nError info: "+err);
+                        logger.error("Error occured while calling queryAsyncJobResult !\nError info: "+err);
                     }
                     else{
                         if(res.errorcode){
-                            console.log(res);  //if an error code is returned, VM deployment has been failed, log the error.
+                            logger.error("VM deployment failed: "+ JSON.stringify(res));  //if an error code is returned, VM deployment has been failed, log the error.
                         }
                         else{
                             var VMId = res.virtualmachine.id;
@@ -268,6 +274,7 @@ module.exports = function (zSession) {
 
                             DBHost.findOne({cloudstackID:params.hostID}).exec(function (err, host) {
                                 if(err){
+                                    logger.error(ERROR.DB_CONNECTION_ERROR);
                                     callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                                 }
                                 else{
@@ -300,11 +307,10 @@ module.exports = function (zSession) {
 
                                     allocation.save(function (err) {        //save allocation in database
                                         if (err) {
-                                            console.log("Error saving allocation in the database\nError Info: "+err);
-                                            console.log('==============================================================');
+                                            logger.error("Error saving allocation in the database\nError Info: "+err);
                                         }
                                         else {
-                                            console.log("Allocation saved in database !\n======================================================================");
+                                            logger.info("Allocation saved in database !");
                                         }
                                     });
                                 }
@@ -333,6 +339,7 @@ module.exports = function (zSession) {
         cloudstack.execute('createInstanceGroup', {name: thisAllocationId}, function (err, result) {
             var vmGroupID = result.createinstancegroupresponse.instancegroup.id;
             if (err) {
+                logger.error(ERROR.CLOUDSTACK_ERROR);
                 callback(response.error(500, ERROR.CLOUDSTACK_ERROR, err));
             }
             else {
@@ -353,6 +360,7 @@ module.exports = function (zSession) {
                                         callback(err);
                                     }
                                     else {
+                                        logger.info("Resource allocation successful!");
                                         callback(null, response.success(200, 'Resource allocation successful!', result));
                                     }
                                 });
@@ -376,10 +384,11 @@ module.exports = function (zSession) {
 
             getDBHostByZabbixId(filteredHostsInfo[0].hostId, function (err, dbHost) {   //to query database using zabbix host id
                 if(err){
+                    logger.error(ERROR.DB_CONNECTION_ERROR);
                     callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                 }
                 else{
-                    console.log("Selected Host : "+ dbHost.ipAddress);
+                    logger.info(dbHost.ipAddress + " selected for deployment");
                     callback(null, dbHost);
                 }
             });
@@ -408,10 +417,11 @@ module.exports = function (zSession) {
 
                 getDBHostByZabbixId(minMemoryHostInfo.hostId, function (err, dbHost) {
                     if(err){
+                        logger.error(ERROR.DB_CONNECTION_ERROR);
                         callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
                     }
                     else{
-                        console.log("Selected Host : "+ dbHost.ipAddress);
+                        logger.info(dbHost.ipAddress + " selected for deployment");
                         callback(null, dbHost);
                     }
                 });
