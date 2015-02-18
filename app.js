@@ -46,6 +46,7 @@ var zabbixLoginCallback = function(data, res) {
     app.post('/login', routes.login);
 
     app.post('/request', function(req, res){
+        logger.info("GET /request received !");
         routes.submitAPIRequest(req, res, sessID);
     });
 

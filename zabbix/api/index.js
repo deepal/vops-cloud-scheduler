@@ -1,6 +1,8 @@
 module.exports = function(sessionID){
 
     require("../../config/index");
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
     var sessID = sessionID;
     var restClient = require('node-rest-client').Client;
     var client = new restClient();
@@ -23,8 +25,12 @@ module.exports = function(sessionID){
         returnData.status = null;
         returnData.data = null;
 
-        client.post(ZABBIX.API, args, function(resData,rawRes){
+        var req = client.post(ZABBIX.API, args, function(resData,rawRes){
             callBack(resData, rawRes);
+        });
+
+        req.on('error',function(err){
+            logger.error(ERROR.REST_CLIENT_ERROR+". Error:"+JSON.stringify(err));
         });
 
     }

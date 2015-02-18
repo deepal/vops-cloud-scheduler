@@ -17,6 +17,7 @@ ERROR = {
     JVIRSH_SERVICE_ERROR: 'Error communicating with JVirsh Preemption Web Service',
     INTERNAL_JVIRSH_ERROR: 'Internal Error occured in JVirsh',
     NOT_LOGGED_IN: 'You are not logged in !',
+    REST_CLIENT_ERROR: 'Error occured calling an external REST API!',
     REQUEST_PRIORITY_NOT_AUTHORIZED: 'You have no previleges to specify this priority level for the request',
     REQUEST_QUEUED: 'Your request cannot be currently served due to insufficient resources! It has been queued and will be served later',
     SESSION_KEY_MISSING_IN_REQUEST: 'Authentication failed! Session ID is missing in the request',

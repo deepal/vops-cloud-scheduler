@@ -87,7 +87,7 @@ module.exports = function () {
 
         Hosts.findOne({ zabbixID: candidate.hostId }).exec(function (err, hostIds) {
             if(err){
-                logger.error(ERROR.DB_CONNECTION_ERROR);
+                logger.error(ERROR.DB_CONNECTION_ERROR+". Error: "+JSON.stringify(err));
                 callback(response.error(500, ERROR.DB_CONNECTION_ERROR, err));
             }
             else{
@@ -247,6 +247,7 @@ module.exports = function () {
 
                         migrations.push({
                             vmId : vmList[i].vmID,
+                            instanceName: vmList[i].detailedInfo.instancename,
                             migrationHostId: hostMemInfo[j].hostId
                         });
                         //tempUsedMemory = tempUsedMemory + vmMemory;
@@ -282,6 +283,7 @@ module.exports = function () {
                         callback(err);
                     }
                 });
+                logger.info("Migrating Virtual machine "+migrationAllocation[vmIndex].instanceName+" to host "+hostIds.ipAddress+" ...");
             });
 
         }

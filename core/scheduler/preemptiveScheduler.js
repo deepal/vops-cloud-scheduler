@@ -48,7 +48,7 @@ module.exports = function(){
 
                     queuedRequest.save(function (err) {
                         if(err){
-                            logger.error("Database error occured while saving queued request");
+                            logger.error(ERROR.DB_CONNECTION_ERROR+". Error: "+JSON.stringify(err));
                         }
                         else{
                             logger.info("Queued Request Saved In database!");
@@ -139,14 +139,14 @@ module.exports = function(){
 
             preemptedJob.save(function (err) {
                 if(err){
-                    logger.error("Error occured when saving preempted request in database! ");
+                    logger.error("Error occured when saving preempted request in database!. Error: "+JSON.stringify(err));
                 }
                 else{
                     Allocation.remove({
                         'VM.InstanceName': vmIDs[index]
                     }, function (err) {
                         if(err){
-                            logger.error('Error removing allocation from database ! ');
+                            logger.error('Error removing allocation from database !'+". Error: "+JSON.stringify(err));
                         }
                         else{
                             index++;
@@ -195,7 +195,7 @@ module.exports = function(){
 
             highPriorityQueuedAlloc.save(function (err) {
                 if(err){
-                    logger.error("Error occured saving request in database ! Error info: "+JSON.stringify(err));
+                    logger.error("Error occured saving request in database !. Error: "+JSON.stringify(err));
                 }
                 else{
                     logger.error("Queued Request Saved In database! ");

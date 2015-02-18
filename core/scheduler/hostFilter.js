@@ -1,6 +1,8 @@
 module.exports = function (resourceRequest) {
 
     var unitconverter = require('../util/unitConverter')();
+    var bunyan = require('bunyan');
+    var logger = bunyan.createLogger({name: APP_NAME});
 
     var cloudstack = new (require('csclient'))({
         serverURL: CLOUDSTACK.API,
@@ -97,7 +99,7 @@ module.exports = function (resourceRequest) {
             }
 
             else{
-             callback(responseInfo.error(500,"Database Error!", err));
+                callback(responseInfo.error(500,"Database Error!", err));
             }
         });
     };
@@ -353,6 +355,7 @@ module.exports = function (resourceRequest) {
 
         cloudstack.execute('listConfigurations', {}, function(err, result){
             if(err){
+                logger.error(ERROR.CLOUDSTACK_ERROR+". Error: "+JSON.stringify(err));
                 var cloudstackCpuOPFactor = 1;
                 var cloudstackMemOPFactor = 1;
                 var cloudstackStorageOPFactor = 1;
