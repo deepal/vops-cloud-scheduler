@@ -69,7 +69,7 @@ module.exports = function (callback) {
                 zapi.exec('hostinterface.get', {}, function (resData, rawData) {
                     var zabbixHostInfo = resData.result;
 
-                    cloudstack.execute('listHosts', {}, function (err, result) {
+                    cloudstack.execute('listHosts', {state:'up'}, function (err, result) {
                         if (err) {
                             console.log(err);
                         }

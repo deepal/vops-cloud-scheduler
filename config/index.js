@@ -4,7 +4,7 @@ APP_NAME = "Smart Cloud Scheduler";
 LISTEN_PORT = 3000;
 HYPERVISOR = 'kvm';
 SERVICES = {
-    PREEMPTION_SERVICE_URL: 'http://localhost:8080/preempt'
+    PREEMPTION_SERVICE_URL: 'http://10.8.108.24:8080/preempt'
 };
 
 ERROR = {

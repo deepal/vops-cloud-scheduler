@@ -78,7 +78,7 @@ module.exports = function(){
                                 headers:{"Content-Type": "application/json"}    // ask response type to be application/json-rpc
                             };
 
-                            logger.info('Trying to preempt Virtual machines [ '+ requestParams.vmIDs+' ]');
+                            logger.info('Trying to preempt Virtual machines [ '+ requestParams.vmIDs+' ] on host '+requestParams.hostIP+' ...');
 
                             var req = client.post(SERVICES.PREEMPTION_SERVICE_URL, args, function (resData, rawRes) {
                                 if(resData.status ==200){
