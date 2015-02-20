@@ -2,10 +2,8 @@
  * Created by deepal on 2/20/15.
  */
 
-module.exports = function(secondaryStorageIP,secondaryStorageMountPoint){
+module.exports = function(){
 
-    var secStorageIP = secondaryStorageIP;
-    var secStorageMP = secondaryStorageMountPoint;
     require('../../config');
 
     //usernames and passwords associated with accounts in each host
@@ -72,7 +70,7 @@ module.exports = function(secondaryStorageIP,secondaryStorageMountPoint){
                         }
                         else{
                             //copy snapshot to secondary storage
-                            sshexec('scp /home/'+username+'/Desktop'+vmList[index]+'.vmsav root@'+secondaryStorageIP+':'+secondaryStorageMountPoint+'/vmsaves/', hostIP, username, password, function (err, res) {
+                            sshexec('scp /home/'+username+'/Desktop'+vmList[index]+'.vmsav root@'+SEC_STORAGE_IP+':'+SEC_STORAGE_MOUNT_POINT+'/vmsaves/', hostIP, username, password, function (err, res) {
                                 if(err){
                                     callback(err);
                                 }

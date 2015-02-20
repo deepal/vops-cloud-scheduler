@@ -7,7 +7,8 @@ SERVICES = {
     PREEMPTION_SERVICE_URL: 'http://localhost:8080/preempt'
 };
 
-SEC_STORAGE_MOUNT_POINT: '/mnt/secondary'
+SEC_STORAGE_MOUNT_POINT = '/mnt/secondary';
+SEC_STORAGE_IP = '10.8.100.201';
 
 ERROR = {
     DB_CONNECTION_ERROR : 'Database Error !',
