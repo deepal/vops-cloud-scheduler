@@ -4,8 +4,10 @@ APP_NAME = "Smart Cloud Scheduler";
 LISTEN_PORT = 3000;
 HYPERVISOR = 'kvm';
 SERVICES = {
-    PREEMPTION_SERVICE_URL: 'http://10.8.108.24:8080/preempt'
+    PREEMPTION_SERVICE_URL: 'http://localhost:8080/preempt'
 };
+
+SEC_STORAGE_MOUNT_POINT: '/mnt/secondary'
 
 ERROR = {
     DB_CONNECTION_ERROR : 'Database Error !',
@@ -14,11 +16,12 @@ ERROR = {
     HTTP_ERROR: 'Internal HTTP Error !',
     UNKNOWN_ERROR: 'An Unknown Error occured! May be due to an unknown response from JVirsh Service!',
     NO_RESOURCES_TO_ALLOCATE: 'No enough resource to serve your request at this moment !',
-    JVIRSH_SERVICE_ERROR: 'Error communicating with JVirsh Preemption Web Service',
-    INTERNAL_JVIRSH_ERROR: 'Internal Error occured in JVirsh',
+    JVIRSH_SERVICE_ERROR: 'Error communicating with JVirsh Preemption Web Service!',
+    NODEVIRSH_SERVICE_ERROR: 'Error occured in while performing preemption!',
+    INTERNAL_JVIRSH_ERROR: 'Internal Error occured in JVirsh!',
     NOT_LOGGED_IN: 'You are not logged in !',
     REST_CLIENT_ERROR: 'Error occured calling an external REST API!',
-    REQUEST_PRIORITY_NOT_AUTHORIZED: 'You have no previleges to specify this priority level for the request',
+    REQUEST_PRIORITY_NOT_AUTHORIZED: 'You have no previleges to specify this priority level for the request!',
     REQUEST_QUEUED: 'Your request cannot be currently served due to insufficient resources! It has been queued and will be served later',
     SESSION_KEY_MISSING_IN_REQUEST: 'Authentication failed! Session ID is missing in the request',
     CUSTOM_ERROR: function(errText){

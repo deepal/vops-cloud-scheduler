@@ -1,12 +1,11 @@
-<<<<<<< HEAD
 .idea/*
 VirtualOps.iml
 *.log
-=======
 *.iml
 *.log
 .idea/*
->>>>>>> 0817fae34c10f9278ee35952a2c1989d91d9ef06
 
 projectFilesBackup
 services/jvirsh/.idea/*
+services/.idea
+services/jvirsh/.idea
